@@ -1,0 +1,62 @@
+# One artist per line. Used by: npm run fetch-data
+# India
+Arijit Singh
+Pritam
+Shreya Ghoshal
+A.R. Rahman
+Anirudh Ravichander
+Sid Sriram
+Diljit Dosanjh
+Karan Aujla
+AP Dhillon
+Badshah
+Shubh
+Sidhu Moose Wala
+Vishal-Shekhar
+Sachet Tandon
+Jubin Nautiyal
+Neha Kakkar
+Atif Aslam
+Anuv Jain
+Talwiinder
+Darshan Raval
+Sonu Nigam
+Kishore Kumar
+Lata Mangeshkar
+Devi Sri Prasad
+Thaman S
+Yo Yo Honey Singh
+Seedhe Maut
+DIVINE
+Hanumankind
+# Global
+Taylor Swift
+The Weeknd
+Bad Bunny
+Drake
+Billie Eilish
+Ed Sheeran
+Bruno Mars
+Lady Gaga
+Sabrina Carpenter
+Coldplay
+Kendrick Lamar
+Ariana Grande
+Dua Lipa
+Rihanna
+Justin Bieber
+Eminem
+Post Malone
+SZA
+BTS
+BLACKPINK
+ROSÉ
+Travis Scott
+Shakira
+KAROL G
+Imagine Dragons
+Arctic Monkeys
+Linkin Park
+Calvin Harris
+David Guetta
+Doja Cat

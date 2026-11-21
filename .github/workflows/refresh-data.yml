@@ -1,0 +1,35 @@
+# Refreshes the Spotify numbers every 2 days and commits them.
+# Vercel / Netlify then redeploy automatically with the new data.
+# Setup: GitHub repo -> Settings -> Secrets and variables -> Actions -> New secret: APIFY_TOKEN
+# Cost: ~$0.21 per run for 60 artists (~$3/month, inside Apify's free $5/month).
+name: Refresh Spotify data
+
+on:
+  schedule:
+    - cron: '30 2 */2 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run fetch-data
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      - run: npm test
+      - name: Commit new data
+        run: |
+          git config user.name "listener-atlas-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/live.json
+          git diff --cached --quiet || git commit -m "chore: refresh Spotify data"
+          git push

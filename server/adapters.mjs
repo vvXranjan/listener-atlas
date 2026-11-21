@@ -1,0 +1,50 @@
+// Small wrappers that plug handle() into each host.
+
+import { handle } from './handlers.mjs';
+
+async function readBody(req) {
+  if (Buffer.isBuffer(req.body)) return req.body;
+  const chunks = [];
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > 5 * 1024 * 1024) break;
+    chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+  }
+  return Buffer.concat(chunks);
+}
+
+const CACHE = {
+  live: 'public, s-maxage=300, stale-while-revalidate=3600',
+  cities: 'public, s-maxage=86400',
+  city: 'public, s-maxage=600, stale-while-revalidate=3600',
+  'artist-info': 'public, s-maxage=21600',
+  'song-insights': 'public, s-maxage=600',
+  'now-playing': 'public, s-maxage=8',
+};
+
+// Node style (req, res): Vite dev server and Vercel functions
+export function nodeHandler(route) {
+  return async (req, res) => {
+    const url = new URL(req.url, 'http://local');
+    const query = Object.fromEntries(url.searchParams);
+    const body = req.method === 'POST' ? await readBody(req) : null;
+    const r = await handle({ route, method: req.method, query, body });
+    res.statusCode = r.status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    if (r.status === 200 && CACHE[route]) res.setHeader('Cache-Control', CACHE[route]);
+    res.end(JSON.stringify(r.body));
+  };
+}
+
+// Web standard (Request -> Response): Netlify functions
+export async function webHandler(request) {
+  const url = new URL(request.url);
+  const route = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '').split('/')[0];
+  const query = Object.fromEntries(url.searchParams);
+  const body = request.method === 'POST' ? Buffer.from(await request.arrayBuffer()) : null;
+  const r = await handle({ route, method: request.method, query, body });
+  const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+  if (r.status === 200 && CACHE[route]) headers['Cache-Control'] = CACHE[route];
+  return new Response(JSON.stringify(r.body), { status: r.status, headers });
+}

@@ -1,0 +1,3605 @@
+{
+ "source": "Spotify via Apify",
+ "updatedAt": "2026-11-21T08:32:00.000Z",
+ "artists": [
+  {
+   "id": "1wRPtKGflJrBx9BmLsSwlU",
+   "name": "Pritam",
+   "listeners": 50095209,
+   "followers": 79153228,
+   "worldRank": 70,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebcb6926f44f620555ba444fca",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 4343456,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 3873355,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 3402221,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 3108280,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 2841835,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1mYsTxnqsietFxj1OgoGbG",
+   "name": "A.R. Rahman",
+   "listeners": 45218149,
+   "followers": 86557079,
+   "worldRank": 86,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebb19af0ea736c6228d6eb539c",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 4531225,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 3891045,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 3100886,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2880051,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2035310,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0oOet2f43PA68X5RxKobEy",
+   "name": "Shreya Ghoshal",
+   "listeners": 56481468,
+   "followers": 37774997,
+   "worldRank": 41,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebe7ce89a9f5d11e0ba26677eb",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 4163690,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 4134059,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 3507499,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 3299739,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 3071016,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6DARBhWbfcS9E4yJzcliqQ",
+   "name": "Karan Aujla",
+   "listeners": 18076801,
+   "followers": 33301712,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb5bc8823f5e12458215d64678",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1713975,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1709559,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Chandigarh",
+     "country": "IN",
+     "region": "CH",
+     "listeners": 1076160,
+     "position": [
+      76.7884,
+      30.7363
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1030344,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Ludhiana",
+     "country": "IN",
+     "region": "PB",
+     "listeners": 1008992,
+     "position": [
+      75.8538,
+      30.912
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4YRxDV8wJFPHPTeXepOstw",
+   "name": "Arijit Singh",
+   "listeners": 53934899,
+   "followers": 197974411,
+   "worldRank": 51,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebadfb0b2df04b77e43b5f7375",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 4364997,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 3832991,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 3342668,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 3111312,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 3093534,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2FKWNmZWDBZR4dE5KX4plR",
+   "name": "Diljit Dosanjh",
+   "listeners": 20800326,
+   "followers": 43312440,
+   "worldRank": 423,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebfc043bea91ac91c222d235c9",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1521139,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1442452,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1228635,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 870191,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Jaipur",
+     "country": "IN",
+     "region": "RJ",
+     "listeners": 842796,
+     "position": [
+      75.7878,
+      26.9196
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4zCH9qm4R2DADamUHMCa6O",
+   "name": "Anirudh Ravichander",
+   "listeners": 27104051,
+   "followers": 53735486,
+   "worldRank": 272,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb0f0be2054fe9594026a6b843",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 4974276,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 4353922,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 2831786,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Coimbatore",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 2129120,
+     "position": [
+      76.9661,
+      11.0055
+     ]
+    },
+    {
+     "city": "Kochi",
+     "country": "IN",
+     "region": "KL",
+     "listeners": 1914602,
+     "position": [
+      76.2673,
+      9.9312
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7qjJw7ZM2ekDSahLXPjIlN",
+   "name": "Sid Sriram",
+   "listeners": 16428453,
+   "followers": 21926044,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebef6a8800763bf428e85940a6",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 3130571,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 3018038,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 2184165,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Kochi",
+     "country": "IN",
+     "region": "KL",
+     "listeners": 1562325,
+     "position": [
+      76.2673,
+      9.9312
+     ]
+    },
+    {
+     "city": "Coimbatore",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 1153530,
+     "position": [
+      76.9661,
+      11.0055
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6LEG9Ld1aLImEFEVHdWNSB",
+   "name": "AP Dhillon",
+   "listeners": 14657521,
+   "followers": 11532681,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebfb505b37709fa86cfd8f55b3",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1156088,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1101404,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 937949,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 717211,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Jaipur",
+     "country": "IN",
+     "region": "RJ",
+     "listeners": 669449,
+     "position": [
+      75.7878,
+      26.9196
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0y59o4v8uw5crbN9M3JiL1",
+   "name": "Badshah",
+   "listeners": 25088040,
+   "followers": 33696823,
+   "worldRank": 320,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebc2b02f1ca1503fa275fb7a10",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1856477,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1693759,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1648794,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1347260,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1199745,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6WOdPJmexxFINcKMkP2jMG",
+   "name": "Sachet Tandon",
+   "listeners": 18127576,
+   "followers": 8964814,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebe34fad78221a2cb31da57946",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1509173,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1040863,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1033357,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1005599,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 947423,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6Mv8GjQa7LKUGCAqa9qqdb",
+   "name": "Vishal-Shekhar",
+   "listeners": 33681182,
+   "followers": 22076528,
+   "worldRank": 168,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb90b6c3d093f9b02aad628eaf",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2975090,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 2223149,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2094638,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 2080361,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1773936,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4PULA4EFzYTrxYvOVlwpiQ",
+   "name": "Sidhu Moose Wala",
+   "listeners": 10223554,
+   "followers": 53529939,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb9973157bdaedef3f77ef8e13",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 972539,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 923049,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Chandigarh",
+     "country": "IN",
+     "region": "CH",
+     "listeners": 803274,
+     "position": [
+      76.7884,
+      30.7363
+     ]
+    },
+    {
+     "city": "Ludhiana",
+     "country": "IN",
+     "region": "PB",
+     "listeners": 802470,
+     "position": [
+      75.8538,
+      30.912
+     ]
+    },
+    {
+     "city": "Jaipur",
+     "country": "IN",
+     "region": "RJ",
+     "listeners": 604258,
+     "position": [
+      75.7878,
+      26.9196
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1tqysapcCh1lWEAc9dIFpa",
+   "name": "Jubin Nautiyal",
+   "listeners": 21220642,
+   "followers": 22440801,
+   "worldRank": 406,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb2fe0fcf305ae8523cafc39a8",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1473319,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1203894,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1166239,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1098377,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 1083730,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5r3wPya2PpeTTsXsGhQU8O",
+   "name": "Shubh",
+   "listeners": 11034463,
+   "followers": 13585815,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb9dfbd284ba8a7d4876a181e3",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 925520,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 885147,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Jaipur",
+     "country": "IN",
+     "region": "RJ",
+     "listeners": 560041,
+     "position": [
+      75.7878,
+      26.9196
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 548507,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Chandigarh",
+     "country": "IN",
+     "region": "CH",
+     "listeners": 519893,
+     "position": [
+      76.7884,
+      30.7363
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5f4QpKfy7ptCHwTqspnSJI",
+   "name": "Neha Kakkar",
+   "listeners": 15501344,
+   "followers": 50704571,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb2c3c6dc56635014fa90b32a6",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1124685,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 938916,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 888571,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 824204,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 751497,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6QoCrBHsojKnOrsGNfRcTN",
+   "name": "Talwiinder",
+   "listeners": 9861360,
+   "followers": 5154030,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb1b5240f39de9ee81b0348a70",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 711754,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 647456,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 539324,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 439255,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 417404,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4gdMJYnopf2nEUcanAwstx",
+   "name": "Anuv Jain",
+   "listeners": 19800268,
+   "followers": 13934968,
+   "worldRank": 464,
+   "image": "https://i.scdn.co/image/ab6761610000e5eba837a6cb82dd949d5e1f9b53",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1551106,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1134091,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1085308,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1081766,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1063539,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2oSONSC9zQ4UonDKnLqksx",
+   "name": "Atif Aslam",
+   "listeners": 31352896,
+   "followers": 50456701,
+   "worldRank": 190,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebc40600e02356cc86f0debe84",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2885987,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 2140024,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1995950,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1989305,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1544293,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0GF4shudTAFv8ak9eWdd4Y",
+   "name": "Kishore Kumar",
+   "listeners": 12320799,
+   "followers": 28514137,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebc9ac92d87de28795c1c49730",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1224623,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 875752,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 870991,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 848188,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Kolkata",
+     "country": "IN",
+     "region": "WB",
+     "listeners": 531135,
+     "position": [
+      88.363,
+      22.5626
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2GoeZ0qOTt6kjsWW4eA6LS",
+   "name": "Darshan Raval",
+   "listeners": 14826525,
+   "followers": 27577448,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebb26146b5962c243babaa11f0",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1140261,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 811504,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 785675,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 783227,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 702914,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1dVygo6tRFXC8CSWURQJq2",
+   "name": "Sonu Nigam",
+   "listeners": 27471857,
+   "followers": 25223254,
+   "worldRank": 265,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebbc959d7569618ec2af2210f5",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 2789570,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 2360090,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1628208,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1573277,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1547085,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    }
+   ]
+  },
+  {
+   "id": "61JrslREXq98hurYL2hYoc",
+   "name": "Lata Mangeshkar",
+   "listeners": 17544618,
+   "followers": 31634823,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eba0199b159c0c5a9f62333d32",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1635223,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1192616,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1165506,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1089514,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 717599,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5sSzCxHtgL82pYDvx2QyEU",
+   "name": "Devi Sri Prasad",
+   "listeners": 17320160,
+   "followers": 14689577,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebaa5350248841ba12e12467af",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 3768005,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 2577096,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1599901,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Coimbatore",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 911096,
+     "position": [
+      76.9661,
+      11.0055
+     ]
+    },
+    {
+     "city": "Kochi",
+     "country": "IN",
+     "region": "KL",
+     "listeners": 701990,
+     "position": [
+      76.2673,
+      9.9312
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2oBG74gAocPMFv6Ij9ykdo",
+   "name": "Seedhe Maut",
+   "listeners": 2104454,
+   "followers": 1469235,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebdbfd70ecee8d42dfd5fbb29d",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 252568,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 234096,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 207283,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 181531,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 103045,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7uIbLdzzSEqnX0Pkrb56cR",
+   "name": "Yo Yo Honey Singh",
+   "listeners": 20198044,
+   "followers": 46585427,
+   "worldRank": 444,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb0d980c444c93fded5715e1b4",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1641694,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 1617337,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1446453,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 1075356,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 948569,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2FgHPfRprDaylrSRVf1UlN",
+   "name": "Thaman S",
+   "listeners": 12665635,
+   "followers": 12272010,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb1edc6d40afbea5426d0cfe0f",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 3358276,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    },
+    {
+     "city": "Chennai",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 1894880,
+     "position": [
+      80.2785,
+      13.0878
+     ]
+    },
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 1697363,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Coimbatore",
+     "country": "IN",
+     "region": "TN",
+     "listeners": 607603,
+     "position": [
+      76.9661,
+      11.0055
+     ]
+    },
+    {
+     "city": "Kochi",
+     "country": "IN",
+     "region": "KL",
+     "listeners": 451077,
+     "position": [
+      76.2673,
+      9.9312
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4Ai0pGz6GhQavjzaRhPTvz",
+   "name": "DIVINE",
+   "listeners": 4799701,
+   "followers": 6324295,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebe4bae1cd1803402a906b61ba",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 361266,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 345235,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 336951,
+     "position": [
+      77.2315,
+      28.6519
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 313328,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "Jaipur",
+     "country": "IN",
+     "region": "RJ",
+     "listeners": 197826,
+     "position": [
+      75.7878,
+      26.9196
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4nVa6XlBFlIkF6msW57PHp",
+   "name": "Hanumankind",
+   "listeners": 10908568,
+   "followers": 1033348,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebd5a94f1d05a422f1057b0e90",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Bengaluru",
+     "country": "IN",
+     "region": "KA",
+     "listeners": 400993,
+     "position": [
+      77.5937,
+      12.9719
+     ]
+    },
+    {
+     "city": "Pune",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 358397,
+     "position": [
+      73.8554,
+      18.5196
+     ]
+    },
+    {
+     "city": "Mumbai",
+     "country": "IN",
+     "region": "MH",
+     "listeners": 288002,
+     "position": [
+      72.8826,
+      19.0728
+     ]
+    },
+    {
+     "city": "New Delhi",
+     "country": "IN",
+     "region": "DL",
+     "listeners": 265714,
+     "position": [
+      77.2245,
+      28.6358
+     ]
+    },
+    {
+     "city": "Hyderabad",
+     "country": "IN",
+     "region": "TS",
+     "listeners": 234687,
+     "position": [
+      78.4564,
+      17.384
+     ]
+    }
+   ]
+  },
+  {
+   "id": "06HL4z0CvFAxyc27GXpf02",
+   "name": "Taylor Swift",
+   "listeners": 96275730,
+   "followers": 166859396,
+   "worldRank": 7,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb12184bdd29403de54cb9d9c7",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 1299473,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1291159,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Jakarta",
+     "country": "ID",
+     "region": "JK",
+     "listeners": 1133550,
+     "position": [
+      106.8451,
+      -6.2146
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1056925,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 1025853,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1Xyo4u8uXC1ZmMpatF05PJ",
+   "name": "The Weeknd",
+   "listeners": 117098608,
+   "followers": 130435187,
+   "worldRank": 2,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebc1719ac9e6a75c1c25835018",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1644089,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1541101,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1351998,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 1072954,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    },
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 1045787,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4q3ewBCX7sLwd24euuV69X",
+   "name": "Bad Bunny",
+   "listeners": 89248347,
+   "followers": 126698029,
+   "worldRank": 10,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb81f47f44084e0a09b5f0fa13",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 4243839,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 2688046,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Bogotá",
+     "country": "CO",
+     "region": "DC",
+     "listeners": 2552726,
+     "position": [
+      -74.0817,
+      4.6097
+     ]
+    },
+    {
+     "city": "Lima",
+     "country": "PE",
+     "region": "LMA",
+     "listeners": 2068690,
+     "position": [
+      -77.0282,
+      -12.0432
+     ]
+    },
+    {
+     "city": "Buenos Aires",
+     "country": "AR",
+     "region": "C",
+     "listeners": 1619781,
+     "position": [
+      -58.3772,
+      -34.6131
+     ]
+    }
+   ]
+  },
+  {
+   "id": "3TVXtAsR1Inumwj472S9r4",
+   "name": "Drake",
+   "listeners": 94074479,
+   "followers": 119720414,
+   "worldRank": 8,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1652615,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "New York City",
+     "country": "US",
+     "region": "NY",
+     "listeners": 1461014,
+     "position": [
+      -74.006,
+      40.7143
+     ]
+    },
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 1335738,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    },
+    {
+     "city": "Chicago",
+     "country": "US",
+     "region": "IL",
+     "listeners": 1263483,
+     "position": [
+      -87.65,
+      41.85
+     ]
+    },
+    {
+     "city": "Dallas",
+     "country": "US",
+     "region": "TX",
+     "listeners": 1247412,
+     "position": [
+      -96.8067,
+      32.7831
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6qqNVTkY8uBg9cP3Jd7DAH",
+   "name": "Billie Eilish",
+   "listeners": 78145630,
+   "followers": 132230770,
+   "worldRank": 16,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb4a21b4760d2ecb7b0dcdc8da",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1019399,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 928640,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 842612,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 717149,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 672540,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6eUKZXaKkcviH0Ku9w2n3V",
+   "name": "Ed Sheeran",
+   "listeners": 81323311,
+   "followers": 129128101,
+   "worldRank": 14,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebd55c95ad400aed87da52daec",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 945149,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 869980,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 827052,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 723385,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 719348,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0du5cEVh5yTK9QJze8zA0C",
+   "name": "Bruno Mars",
+   "listeners": 122997602,
+   "followers": 90917804,
+   "worldRank": 1,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebc7688aad1bf03986934d7e26",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1793430,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1673758,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Jakarta",
+     "country": "ID",
+     "region": "JK",
+     "listeners": 1248520,
+     "position": [
+      106.8451,
+      -6.2146
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 1245940,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1182493,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1HY2Jd0NmPuamShAr6KMms",
+   "name": "Lady Gaga",
+   "listeners": 101245782,
+   "followers": 49615706,
+   "worldRank": 5,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebaadc18cac8d48124357c38e6",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1392850,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1353129,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1110908,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 992994,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 894972,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "74KM79TiuVKeVCqs8QtB0B",
+   "name": "Sabrina Carpenter",
+   "listeners": 53451180,
+   "followers": 36041377,
+   "worldRank": 54,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb78e45cfa4697ce3c437cb455",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 708388,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 655795,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 645633,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 571783,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 554059,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2YZyLoL8N0Wb9xBt1NhZWg",
+   "name": "Kendrick Lamar",
+   "listeners": 68251838,
+   "followers": 49533803,
+   "worldRank": 29,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb39ba6dcd4355c03de0b50918",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 947744,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 879121,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "New York City",
+     "country": "US",
+     "region": "NY",
+     "listeners": 821211,
+     "position": [
+      -74.006,
+      40.7143
+     ]
+    },
+    {
+     "city": "Chicago",
+     "country": "US",
+     "region": "IL",
+     "listeners": 817053,
+     "position": [
+      -87.65,
+      41.85
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 741799,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4gzpq5DPGxSnKTe4SA8HAU",
+   "name": "Coldplay",
+   "listeners": 90281719,
+   "followers": 66253821,
+   "worldRank": 9,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb1ba8fc5f5c73e7e9313cc6eb",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1392270,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1372744,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1004869,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 866608,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 861537,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    }
+   ]
+  },
+  {
+   "id": "66CXWjxzNUsdJxJ2JdwvnR",
+   "name": "Ariana Grande",
+   "listeners": 96578997,
+   "followers": 116660785,
+   "worldRank": 6,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb68412f2d0177a9ebc265ff58",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1227129,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1142872,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 1123139,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1080074,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 1042682,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6M2wZ9GZgrQXHCFfjv46we",
+   "name": "Dua Lipa",
+   "listeners": 69093712,
+   "followers": 49545057,
+   "worldRank": 28,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb0c68f6c95232e716f0abee8d",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1280310,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 973718,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 826017,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 766597,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 733535,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5pKCCKE2ajJHZ9KAiaK11H",
+   "name": "Rihanna",
+   "listeners": 116553241,
+   "followers": 78106595,
+   "worldRank": 3,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebcb565a8e684e3be458d329ac",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1737029,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1674741,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 1247436,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1210196,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "New York City",
+     "country": "US",
+     "region": "NY",
+     "listeners": 1064382,
+     "position": [
+      -74.006,
+      40.7143
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1uNFoZAHBGtllmzznpCI3s",
+   "name": "Justin Bieber",
+   "listeners": 112706061,
+   "followers": 98182989,
+   "worldRank": 4,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebaf20f7db5288bce9beede034",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1562384,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1271407,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 1233559,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    },
+    {
+     "city": "Jakarta",
+     "country": "ID",
+     "region": "JK",
+     "listeners": 1107777,
+     "position": [
+      106.8451,
+      -6.2146
+     ]
+    },
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 1107716,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7dGJo4pcD2V6oG8kP0tJRR",
+   "name": "Eminem",
+   "listeners": 73600233,
+   "followers": 113344970,
+   "worldRank": 20,
+   "image": "https://i.scdn.co/image/ab6761610000e5eba00b11c129b27a88fc72f36b",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1025433,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 899537,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 839109,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 757217,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Melbourne",
+     "country": "AU",
+     "region": "VIC",
+     "listeners": 646110,
+     "position": [
+      144.9633,
+      -37.814
+     ]
+    }
+   ]
+  },
+  {
+   "id": "246dkjvS1zLTtiykXe5h60",
+   "name": "Post Malone",
+   "listeners": 60716696,
+   "followers": 49626284,
+   "worldRank": 36,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebe17c0aa1714a03d62b5ce4e0",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 780447,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 715167,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Chicago",
+     "country": "US",
+     "region": "IL",
+     "listeners": 686407,
+     "position": [
+      -87.65,
+      41.85
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 674779,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Dallas",
+     "country": "US",
+     "region": "TX",
+     "listeners": 649732,
+     "position": [
+      -96.8067,
+      32.7831
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7tYKF4w9nC0nq9CsPZTHyP",
+   "name": "SZA",
+   "listeners": 72450210,
+   "followers": 37606405,
+   "worldRank": 23,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebfd0a9fb6c252a3ba44079acf",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 978713,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 899154,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    },
+    {
+     "city": "New York City",
+     "country": "US",
+     "region": "NY",
+     "listeners": 823623,
+     "position": [
+      -74.006,
+      40.7143
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 815433,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Quezon City",
+     "country": "PH",
+     "region": "00",
+     "listeners": 769191,
+     "position": [
+      121.0509,
+      14.6488
+     ]
+    }
+   ]
+  },
+  {
+   "id": "3Nrfpe0tUJi4K4DXYWgMUX",
+   "name": "BTS",
+   "listeners": 28868600,
+   "followers": 90944357,
+   "worldRank": 235,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebf80ec63ea7a0ef0fba60957d",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 640854,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 501345,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Lima",
+     "country": "PE",
+     "region": "LMA",
+     "listeners": 452820,
+     "position": [
+      -77.0282,
+      -12.0432
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 438579,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 353305,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    }
+   ]
+  },
+  {
+   "id": "41MozSoPIsD1dJM0CLPjZF",
+   "name": "BLACKPINK",
+   "listeners": 17890798,
+   "followers": 61610524,
+   "worldRank": null,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb623538b7014238c54ceee056",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 292468,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 264426,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Singapore",
+     "country": "SG",
+     "region": "",
+     "listeners": 225982,
+     "position": [
+      103.8501,
+      1.2897
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 220282,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Bangkok",
+     "country": "TH",
+     "region": "10",
+     "listeners": 217690,
+     "position": [
+      100.5014,
+      13.754
+     ]
+    }
+   ]
+  },
+  {
+   "id": "3eVa5w3URK5duf6eyVDbu9",
+   "name": "ROSÉ",
+   "listeners": 24518014,
+   "followers": 16570201,
+   "worldRank": 330,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb3939f5ec8323cf370fc9e99e",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Kuala Lumpur",
+     "country": "MY",
+     "region": "14",
+     "listeners": 363877,
+     "position": [
+      101.6865,
+      3.1412
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 328304,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Singapore",
+     "country": "SG",
+     "region": "",
+     "listeners": 284702,
+     "position": [
+      103.8501,
+      1.2897
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 269309,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Bangkok",
+     "country": "TH",
+     "region": "10",
+     "listeners": 256045,
+     "position": [
+      100.5014,
+      13.754
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0Y5tJX1MQlPlqiwlOH1tJY",
+   "name": "Travis Scott",
+   "listeners": 61640813,
+   "followers": 45674346,
+   "worldRank": 34,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb19c2790744c792d05570bb71",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 843068,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 776775,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "New York City",
+     "country": "US",
+     "region": "NY",
+     "listeners": 770787,
+     "position": [
+      -74.006,
+      40.7143
+     ]
+    },
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 757362,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    },
+    {
+     "city": "Chicago",
+     "country": "US",
+     "region": "IL",
+     "listeners": 712634,
+     "position": [
+      -87.65,
+      41.85
+     ]
+    }
+   ]
+  },
+  {
+   "id": "0EmeFodog0BfCgMzAIvKQp",
+   "name": "Shakira",
+   "listeners": 84295761,
+   "followers": 47190696,
+   "worldRank": 13,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb17f15f351cba70561ad8bcac",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 2549727,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 1562073,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Bogotá",
+     "country": "CO",
+     "region": "DC",
+     "listeners": 1314115,
+     "position": [
+      -74.0817,
+      4.6097
+     ]
+    },
+    {
+     "city": "Lima",
+     "country": "PE",
+     "region": "LMA",
+     "listeners": 1108504,
+     "position": [
+      -77.0282,
+      -12.0432
+     ]
+    },
+    {
+     "city": "Madrid",
+     "country": "ES",
+     "region": "MD",
+     "listeners": 1083261,
+     "position": [
+      -3.7026,
+      40.4165
+     ]
+    }
+   ]
+  },
+  {
+   "id": "790FomKkXshlbRYZFtlgla",
+   "name": "KAROL G",
+   "listeners": 71109225,
+   "followers": 68424544,
+   "worldRank": 26,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb3869e286c9043f85e8e4bc06",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 3505893,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 2322911,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Bogotá",
+     "country": "CO",
+     "region": "DC",
+     "listeners": 2314310,
+     "position": [
+      -74.0817,
+      4.6097
+     ]
+    },
+    {
+     "city": "Lima",
+     "country": "PE",
+     "region": "LMA",
+     "listeners": 1697575,
+     "position": [
+      -77.0282,
+      -12.0432
+     ]
+    },
+    {
+     "city": "Guadalajara",
+     "country": "MX",
+     "region": "JAL",
+     "listeners": 1399853,
+     "position": [
+      -103.3918,
+      20.6668
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7Ln80lUS6He07XvHI8qqHH",
+   "name": "Arctic Monkeys",
+   "listeners": 56872159,
+   "followers": 36316402,
+   "worldRank": 39,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb7da39dea0a72f581535fb11f",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 824382,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 795331,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 785810,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 524421,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Manchester",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 472107,
+     "position": [
+      -2.2374,
+      53.4809
+     ]
+    }
+   ]
+  },
+  {
+   "id": "53XhwfbYqKCa1cC15pYq2q",
+   "name": "Imagine Dragons",
+   "listeners": 52554708,
+   "followers": 61003937,
+   "worldRank": 59,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebab47d8dae2b24f5afe7f9d38",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 844551,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 779814,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 505507,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 470790,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 463890,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6XyY86QOPPrYVGvF9ch6wz",
+   "name": "Linkin Park",
+   "listeners": 56705457,
+   "followers": 36907226,
+   "worldRank": 40,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb527d95dabbe8b8b527e8136f",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1225544,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 769522,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 659993,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Frankfurt am Main",
+     "country": "DE",
+     "region": "HE",
+     "listeners": 619742,
+     "position": [
+      8.6842,
+      50.1155
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 616660,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5cj0lLjcoR7YOSnhnX0Po5",
+   "name": "Doja Cat",
+   "listeners": 55930179,
+   "followers": 39234963,
+   "worldRank": 44,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb8a0644455ebfa7d3976f5101",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 701256,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 698037,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 636871,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 581185,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Los Angeles",
+     "country": "US",
+     "region": "CA",
+     "listeners": 565022,
+     "position": [
+      -118.2437,
+      34.0522
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1Cs0zKBU1kc0i8ypK3B9ai",
+   "name": "David Guetta",
+   "listeners": 80328880,
+   "followers": 28842027,
+   "worldRank": 15,
+   "image": "https://i.scdn.co/image/ab6761610000e5ebf150017ca69c8793503c2d4f",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1214942,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1096738,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 950794,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 858261,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Santiago",
+     "country": "CL",
+     "region": "RM",
+     "listeners": 782464,
+     "position": [
+      -70.6483,
+      -33.4569
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7CajNmpbOovFoOoasH2HaY",
+   "name": "Calvin Harris",
+   "listeners": 71245962,
+   "followers": 24359507,
+   "worldRank": 24,
+   "image": "https://i.scdn.co/image/ab6761610000e5eb8ebba5e60113b48de8c11f6b",
+   "updatedAt": "2026-11-21T08:32:00.000Z",
+   "cities": [
+    {
+     "city": "Mexico City",
+     "country": "MX",
+     "region": "CMX",
+     "listeners": 1110878,
+     "position": [
+      -99.1277,
+      19.4285
+     ]
+    },
+    {
+     "city": "London",
+     "country": "GB",
+     "region": "ENG",
+     "listeners": 1060019,
+     "position": [
+      -0.1257,
+      51.5085
+     ]
+    },
+    {
+     "city": "São Paulo",
+     "country": "BR",
+     "region": "SP",
+     "listeners": 1037479,
+     "position": [
+      -46.6361,
+      -23.5475
+     ]
+    },
+    {
+     "city": "Sydney",
+     "country": "AU",
+     "region": "NSW",
+     "listeners": 943247,
+     "position": [
+      151.2073,
+      -33.8678
+     ]
+    },
+    {
+     "city": "Melbourne",
+     "country": "AU",
+     "region": "VIC",
+     "listeners": 799276,
+     "position": [
+      144.9633,
+      -37.814
+     ]
+    }
+   ]
+  }
+ ]
+}
