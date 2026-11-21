@@ -27,11 +27,17 @@ const CACHE = {
   galaxy: 'public, s-maxage=21600',
 };
 
-// Node style (req, res): Vite dev server and Vercel functions
-export function nodeHandler(route) {
+// Node style (req, res): Vite dev server and Vercel functions.
+// With no fixed route, the route comes from the path: /api/<route>
+// (one Vercel function serves every route: the free plan allows only 12 functions).
+export const routeFromPath = (pathname) => pathname.replace(/^\/api\/?/, '').split('/')[0] || '';
+
+export function nodeHandler(fixedRoute) {
   return async (req, res) => {
     const url = new URL(req.url, 'http://local');
     const query = Object.fromEntries(url.searchParams);
+    const route = fixedRoute || req.query?.route || query.route || routeFromPath(url.pathname);
+    if (!fixedRoute) delete query.route; // Vercel adds ?route= for api/[route].js
     const body = req.method === 'POST' ? await readBody(req) : null;
     const r = await handle({ route, method: req.method, query, body });
     res.statusCode = r.status;

@@ -28,3 +28,30 @@ describe('Mix Lab routes', () => {
     expect((await handle({ route: 'song-search', method: 'GET', query: { q: 'a' } })).status).toBe(400);
   });
 });
+
+describe('One Vercel function for every route', async () => {
+  const { nodeHandler, routeFromPath } = await import('../server/adapters.mjs');
+  const fakeRes = () => {
+    const r = { headers: {}, body: '' };
+    r.setHeader = (k, v) => (r.headers[k] = v);
+    r.end = (b) => (r.body = b);
+    return r;
+  };
+
+  it('reads the route from the path', () => {
+    expect(routeFromPath('/api/cities')).toBe('cities');
+    expect(routeFromPath('/api/song-search')).toBe('song-search');
+    expect(routeFromPath('/api/')).toBe('');
+  });
+
+  it('serves /api/cities through api/[route].js like Vercel calls it', async () => {
+    const handler = nodeHandler();
+    const res = fakeRes();
+    await handler({ url: '/api/cities?q=lond&route=cities', method: 'GET', query: { route: 'cities', q: 'lond' } }, res);
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)[0].name).toBe('London');
+    const res2 = fakeRes(); // without Vercel's ?route=
+    await handler({ url: '/api/cities?q=mumb', method: 'GET' }, res2);
+    expect(JSON.parse(res2.body)[0].name).toBe('Mumbai');
+  });
+});

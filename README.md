@@ -305,7 +305,7 @@ server/
   adapters.mjs            Node and Web request adapters, cache headers
   http.mjs                fetch with a time limit
   recommend.mjs, galaxy.mjs, song.mjs, api.mjs, live.mjs   data sources
-api/*.js                  one Vercel function per route
+api/[route].js            one Vercel function for every /api route (free plan allows 12)
 netlify/functions/api.mjs one Netlify function for all routes
 scripts/                  refresh Spotify numbers via Apify
 tests/                    Vitest tests
@@ -316,7 +316,7 @@ tests/                    Vitest tests
 ## Tests
 
 ```bash
-npm test        # 74 tests
+npm test        # 76 tests
 npm run check   # tests + production build
 ```
 
@@ -329,7 +329,7 @@ The tests cover API routes, recommendations and fallbacks, audio analysis (tempo
 Both work out of the box, and the `/api/*` routes run as serverless functions sharing `server/handlers.mjs`.
 
 1. Push to GitHub (include `package-lock.json`, never `.env`).
-2. **Vercel**: New Project → import the repo → Deploy (settings from `vercel.json`: per-route time and memory limits, cache and security headers).
+2. **Vercel**: New Project → import the repo → Deploy (settings from `vercel.json`: one function for all API routes, 30 s limit, cache and security headers).
    **Netlify**: Add new site → import the repo → Deploy (settings from `netlify.toml`).
 3. Add environment variables on the host if you use them (`APIFY_TOKEN`, `VITE_SPOTIFY_CLIENT_ID`, …).
 4. In your Spotify app settings, add a second Redirect URI: `https://<your-site>/callback`.
@@ -357,6 +357,7 @@ Both work out of the box, and the `/api/*` routes run as serverless functions sh
 | "Reconnect Spotify …" | A newer feature needs one more permission: click Reconnect |
 | "Spotify Premium is needed" | Playback control and Play here need Premium |
 | A song I didn't expect played instead of my set | It was in your Spotify queue from before (Spotify plays its queue first). Auto-DJ now skips these automatically; without Auto-DJ, clear your queue in the Spotify app |
+| Vercel: "No more than 12 Serverless Functions" | Fixed: all routes share one function, `api/[route].js` |
 | Feels laggy | Set **⚡ Smooth** in the bottom bar, close other heavy tabs |
 | Galaxy shows few similar artists | Open data is thin for that artist; it fills in when MusicBrainz is less busy |
 | Safari: Play here doesn't start | Safari may block Spotify's web player; the app still controls your Mac or phone Spotify |

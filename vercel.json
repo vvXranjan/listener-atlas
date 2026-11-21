@@ -4,69 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/live.js": {
+    "api/[route].js": {
       "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/artist.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/artist-info.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/now-playing.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/recommend.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/galaxy.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/preview.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/song-search.js": {
-      "maxDuration": 30,
-      "memory": 512,
-      "includeFiles": "src/data/live.json"
-    },
-    "api/audio.js": {
-      "maxDuration": 15,
-      "memory": 512
-    },
-    "api/cities.js": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
-    },
-    "api/city.js": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
-    },
-    "api/song-insights.js": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
-    },
-    "api/shazam.js": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "{src/data/live.json,node_modules/shazamio-core/**}"
+      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**,node_modules/shazamio-core/**}"
     }
   },
   "rewrites": [
