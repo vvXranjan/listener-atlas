@@ -4,6 +4,7 @@
 //     (song IDs come from MusicBrainz, also open source)
 
 import { getCityChart, strip } from './api.mjs';
+import { fetchT as fetch } from './http.mjs';
 
 // Cities to scan (each has an Apple Music "Top 25" city chart)
 const SCAN = [
@@ -18,7 +19,7 @@ const cached = async (key, ttl, fn) => {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < ttl) return hit.v;
   const v = await fn();
-  cache.set(key, { t: Date.now(), v });
+  if (v != null) cache.set(key, { t: Date.now(), v }); // a miss is retried next time
   return v;
 };
 
@@ -110,7 +111,7 @@ export async function artistMbid(name) {
   return cached(`artist-mbid|${strip(name)}`, 7 * 24 * 3600 * 1000, async () => {
     const mb = await mbFetch(
       `https://musicbrainz.org/ws/2/artist?fmt=json&limit=5&query=${encodeURIComponent(`artist:"${name.replace(/"/g, '')}"`)}`,
-      { tries: 1 }
+      { tries: 2 }
     );
     const exact = (mb.artists || []).find((a) => a.score >= 90 && strip(a.name) === strip(name));
     return exact?.id || (mb.artists || []).find((a) => a.score === 100)?.id || null;

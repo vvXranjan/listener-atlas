@@ -24,6 +24,7 @@ const CACHE = {
   recommend: 'public, s-maxage=1800',
   'song-search': 'public, s-maxage=3600',
   preview: 'public, s-maxage=86400',
+  galaxy: 'public, s-maxage=21600',
 };
 
 // Node style (req, res): Vite dev server and Vercel functions

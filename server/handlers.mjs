@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 // bundled copy of the Spotify data (included by every host's bundler)
 import bundledLive from '../src/data/live.json' with { type: 'json' };
+import { fetchT as fetch } from './http.mjs';
 
 const LIVE_FILE = path.resolve(process.cwd(), 'src/data/live.json');
 
@@ -22,10 +23,11 @@ const artistCache = new Map();
 
 export const ROUTES = [
   'live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights', 'recommend',
-  'song-search', 'preview', 'audio',
+  'song-search', 'preview', 'audio', 'galaxy',
 ];
 
 // Only Apple's preview servers may be proxied (stops the proxy being used for anything else)
+const audioCache = new Map(); // recently used previews, so repeat plays are instant
 export const AUDIO_HOSTS = /^https:\/\/(audio-ssl\.itunes\.apple\.com|[a-z0-9-]+\.mzstatic\.com)\//;
 
 /**
@@ -46,7 +48,7 @@ export async function handle({ route, method = 'GET', query = {}, body = null, e
 
       case 'cities': {
         const { searchCities } = await import('./api.mjs');
-        return json(200, searchCities(q('q')));
+        return json(200, await searchCities(q('q')));
       }
 
       case 'city': {
@@ -111,6 +113,12 @@ export async function handle({ route, method = 'GET', query = {}, body = null, e
         return json(200, await recommend(title, artists, env));
       }
 
+      case 'galaxy': {
+        if (!q('name')) return json(400, { error: 'name is required' });
+        const { artistGalaxy } = await import('./galaxy.mjs');
+        return json(200, await artistGalaxy(q('name')));
+      }
+
       case 'song-search': {
         const term = q('q');
         if (term.length < 2) return json(400, { error: 'Type at least 2 letters' });
@@ -142,15 +150,22 @@ export async function handle({ route, method = 'GET', query = {}, body = null, e
       case 'audio': {
         const u = q('u');
         if (!AUDIO_HOSTS.test(u)) return json(400, { error: 'Only Apple Music previews can be loaded' });
-        const r = await fetch(u);
-        if (!r.ok) return json(502, { error: `Preview download failed (${r.status})` });
-        const buf = Buffer.from(await r.arrayBuffer());
-        if (buf.length > 4 * 1024 * 1024) return json(413, { error: 'Preview too large' });
+        let hit = audioCache.get(u);
+        if (!hit) {
+          const r = await fetch(u);
+          if (!r.ok) return json(502, { error: `Preview download failed (${r.status})` });
+          const buf = Buffer.from(await r.arrayBuffer());
+          if (buf.length > 4 * 1024 * 1024) return json(413, { error: 'Preview too large' });
+          hit = { buf, type: r.headers.get('content-type') || 'audio/mp4' };
+          audioCache.set(u, hit);
+          if (audioCache.size > 40) audioCache.delete(audioCache.keys().next().value); // keep memory small
+        }
+        const buf = hit.buf;
         return {
           status: 200,
           binary: true,
           body: buf,
-          headers: { 'Content-Type': r.headers.get('content-type') || 'audio/mp4', 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
+          headers: { 'Content-Type': hit.type, 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
         };
       }
 

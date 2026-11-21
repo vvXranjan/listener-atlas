@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { getQuality } from './perf.js';
 
 // Deep-space background behind the globe:
 // stars of different size and colour, a faint Milky Way band, gentle twinkling,
@@ -26,6 +27,7 @@ function makeStars(w, h) {
       r: big ? 1.2 + rand() * 1.4 : 0.35 + rand() * 0.8,
       a: big ? 0.8 + rand() * 0.2 : 0.25 + rand() * 0.6,
       c: tint(),
+      fill: null,
       tw: rand() < 0.35 ? 0.6 + rand() * 2.2 : 0, // twinkle speed (0 = steady)
       ph: rand() * Math.PI * 2,
       depth: 0.5 + rand() * 0.5, // parallax depth
@@ -46,6 +48,7 @@ function makeStars(w, h) {
       depth: 0.35,
     });
   }
+  for (const s of stars) s.fill = `rgb(${s.c[0]},${s.c[1]},${s.c[2]})`; // made once, not every frame
   return stars;
 }
 
@@ -77,7 +80,7 @@ export default function Starfield({ mapRef }) {
     let nextShoot = performance.now() + 4000;
 
     function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5); // tiny dots don't need full Retina
       w = canvas.clientWidth;
       h = canvas.clientHeight;
       canvas.width = w * dpr;
@@ -112,10 +115,20 @@ export default function Starfield({ mapRef }) {
       return off;
     }
 
+    let lastKey = '';
     function frame(now) {
       raf = requestAnimationFrame(frame);
-      if (now - last < 33) return; // ~30 fps is plenty
+      const smooth = getQuality() === 'smooth';
+      if (now - last < (smooth ? 66 : 40)) return; // 15 fps in smooth mode, 25 otherwise
       last = now;
+      const m = mapRef.current;
+      // zoomed in, the globe covers the sky: draw one last faint frame, then rest
+      const zNow = m ? m.getZoom() : 0;
+      if (zNow > 4.2) {
+        const key = `rest|${Math.round(zNow)}`;
+        if (key === lastKey) return;
+        lastKey = key;
+      } else lastKey = '';
 
       const map = mapRef.current;
       let ox = 0;
@@ -148,7 +161,9 @@ export default function Starfield({ mapRef }) {
       for (const dx of [0, sw]) ctx.drawImage(nebula, baseX * 0.35 + dx - sw * 0.2, baseY, sw, sh);
 
       const t = now / 1000;
-      for (const s of stars) {
+      const step = smooth ? 3 : 1; // smooth mode draws a third of the stars
+      for (let si = 0; si < stars.length; si += step) {
+        const s = stars[si];
         let x = (s.x + baseX * s.depth) % sw;
         if (x < 0) x += sw;
         x -= w * 0.1;
@@ -157,7 +172,7 @@ export default function Starfield({ mapRef }) {
         let a = s.a;
         if (s.tw && !reduced) a *= 0.65 + 0.35 * Math.sin(t * s.tw + s.ph);
         ctx.globalAlpha = a * fade;
-        ctx.fillStyle = `rgb(${s.c[0]},${s.c[1]},${s.c[2]})`;
+        ctx.fillStyle = s.fill;
         if (s.r > 1.1) {
           // bright star with a little glow
           ctx.beginPath();
@@ -174,7 +189,7 @@ export default function Starfield({ mapRef }) {
       ctx.restore();
 
       // shooting star now and then
-      if (!reduced) {
+      if (!reduced && !smooth) {
         if (!shooting && now > nextShoot) {
           shooting = {
             x: Math.random() * w * 0.8,

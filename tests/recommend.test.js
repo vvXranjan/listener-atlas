@@ -47,13 +47,16 @@ function fakeFetch(url, opts = {}) {
   const u = String(url);
   const ok = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { 'content-type': 'application/json' } }));
   if (u.includes('/acr-lookup/')) {
-    if (u.includes('Brand%20New%20Song')) return ok([]); // unknown song
+    if (u.includes('Brand%20New%20Song') || u.includes('Nobody')) return ok([]); // unknown song
     return ok([{ recording_mbid: 'c44742a1-ef4a-4493-84d6-969ef837d125', recording_name: 'No Pole', artist_mbids: ['don-mbid'] }]);
   }
   if (u.includes('/similar-artists/')) return ok([{ name: 'Travis Scott', artist_mbid: 'travis', score: 2000 }, { name: 'Future', artist_mbid: 'future', score: 1500 }]);
   if (u.includes('top-recordings-for-artist/travis')) return ok([{ recording_name: 'SICKO MODE', artist_name: 'Travis Scott', total_listen_count: 89940, caa_id: 2, caa_release_mbid: 'a' }, { recording_name: 'goosebumps', artist_name: 'Travis Scott feat. Kendrick Lamar', total_listen_count: 85291 }]);
   if (u.includes('top-recordings-for-artist/future')) return ok([{ recording_name: 'Mask Off', artist_name: 'Future', total_listen_count: 50000 }]);
   if (u.includes('top-recordings-for-artist/don-mbid')) return ok([{ recording_name: 'No Pole', artist_name: 'Don Toliver', total_listen_count: 9 }, { recording_name: 'Bandit', artist_name: 'Don Toliver', total_listen_count: 8 }]);
+  if (u.includes('musicbrainz.org/ws/2/artist') && u.includes('Nobody')) return ok({ artists: [] });
+  if (u.includes('attribute=artistTerm') && u.includes('Nobody'))
+    return ok({ results: [{ trackName: 'Vibrate', artistName: 'Nobody Known', previewUrl: 'https://audio-ssl.itunes.apple.com/v.m4a' }, { trackName: 'Other Song', artistName: 'Nobody Known', previewUrl: 'https://audio-ssl.itunes.apple.com/o.m4a', artworkUrl100: 'x/100x100bb.jpg' }] });
   if (u.includes('musicbrainz.org/ws/2/artist')) return ok({ artists: [{ id: 'don-mbid', name: 'Don Toliver', score: 100 }] });
   if (u.includes('musicbrainz.org')) return Promise.resolve(new Response('busy', { status: 503 }));
   if (u.includes('labs.api.listenbrainz.org')) return ok(u.includes('days_180') ? labs.recent : labs.longTerm);
@@ -121,6 +124,13 @@ describe('Up next', () => {
     const r = await recommend('No Pole', ['Don Toliver'], {});
     expect(r.pool.length).toBeGreaterThanOrEqual(r.picks.length);
     expect(r.sources).toContain('session');
+  });
+
+  it('artist missing from open data: falls back to their Apple Music catalogue', { timeout: 15000 }, async () => {
+    const r = await recommend('Vibrate', ['Nobody Known'], {});
+    expect(r.sources).toEqual(['catalogue']);
+    expect(r.pool[0]).toMatchObject({ title: 'Other Song', source: 'same-artist' });
+    expect(r.pool[0].why).toMatch(/catalogue/);
   });
 
   it('API route validates input', async () => {

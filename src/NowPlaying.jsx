@@ -11,7 +11,16 @@ import {
   onRightHost,
   moveToRightHost,
   redirectUri,
+  canStream,
+  canQueue,
+  pausePlayback,
+  resumePlayback,
+  nextTrack,
+  previousTrack,
 } from './spotify.js';
+import { setNow } from './nowStore.js';
+import { playHere, useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
+import { everyWhileVisible } from './visibility.js';
 
 const POLL_MS = 5000;
 const mmss = (ms) => {
@@ -20,13 +29,17 @@ const mmss = (ms) => {
 };
 
 // Your Spotify, live: shows the song you're playing and lets you dig into who listens to it.
-export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOnGlobe, follow, setFollow }) {
+export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrary, onShowOnGlobe, follow, setFollow }) {
   const [connected, setConnected] = useState(isLoggedIn());
   const [np, setNp] = useState(null);
   const [error, setError] = useState('');
   const [setup, setSetup] = useState(false);
   const [clientId, setClientId] = useState(getClientId());
   const [, tick] = useState(0);
+  const sdk = useSpotifyPlayer();
+  const [autoPause, setAutoPauseState] = useState(autoPauseOn());
+  const [ctlErr, setCtlErr] = useState('');
+  const [scrub, setScrub] = useState(null); // 0..1 while dragging the progress bar
   const lastId = useRef(null);
   const onChange = useRef(onSongChange);
   onChange.current = onSongChange;
@@ -48,6 +61,7 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOn
         if (stop) return;
         setError('');
         setNp(r);
+        setNow({ track: r?.track || null, playing: !!r?.playing, progressMs: r?.progressMs || 0, fetchedAt: Date.now() });
         const id = r?.track?.id || null;
         if (id && id !== lastId.current) {
           lastId.current = id;
@@ -59,15 +73,24 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOn
         if (!isLoggedIn()) setConnected(false);
       }
     }
-    poll();
-    const t = setInterval(poll, POLL_MS);
-    const p = setInterval(() => tick((n) => n + 1), 1000); // smooth progress bar
+    // every 5s while you look; every 15s in a background tab (keeps your set in sync)
+    const off = everyWhileVisible(poll, POLL_MS, 15000);
+    const p = setInterval(() => !document.hidden && tick((n) => n + 1), 1000); // smooth progress bar
     return () => {
       stop = true;
-      clearInterval(t);
+      off();
       clearInterval(p);
     };
   }, [connected]);
+
+  async function control(fn) {
+    setCtlErr('');
+    try {
+      await fn();
+    } catch (e) {
+      setCtlErr(e.message);
+    }
+  }
 
   async function connect() {
     if (!onRightHost()) return moveToRightHost();
@@ -130,7 +153,14 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOn
         </button>
       </div>
 
-      {!tr && <div className="muted np-idle">Play something on Spotify (phone, Mac or speaker) and it will show here.</div>}
+      {!tr && (
+        <div className="muted np-idle">
+          Play something on Spotify (phone, Mac or speaker) and it will show here.{' '}
+          <button className="link-btn" onClick={onLibrary}>
+            ♥ Open my library
+          </button>
+        </div>
+      )}
 
       {tr && (
         <>
@@ -143,11 +173,54 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOn
               <div className="np-artists">{tr.artists.map((a) => a.name).join(', ')}</div>
             </div>
           </div>
-          <div className="np-bar">
-            <div style={{ width: `${(progress / tr.durationMs) * 100}%` }} />
+          <div
+            className={`np-bar seek ${scrub != null ? 'scrubbing' : ''}`}
+            role="slider"
+            tabIndex={0}
+            aria-label="Song position"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(tr.durationMs / 1000)}
+            aria-valuenow={Math.round(progress / 1000)}
+            title="Click or drag to jump"
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              const bar = e.currentTarget;
+              const rect = bar.getBoundingClientRect();
+              const at = (x) => Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+              bar.setPointerCapture?.(e.pointerId);
+              let f = at(e.clientX);
+              setScrub(f);
+              const move = (ev) => {
+                f = at(ev.clientX);
+                setScrub(f);
+              };
+              const up = () => {
+                bar.removeEventListener('pointermove', move);
+                bar.removeEventListener('pointerup', up);
+                bar.removeEventListener('pointercancel', up);
+                const ms = f * tr.durationMs;
+                setNp((cur) => (cur ? { ...cur, progressMs: ms, fetchedAt: Date.now() } : cur)); // show it right away
+                setScrub(null);
+                control(() => seekHere(ms));
+              };
+              bar.addEventListener('pointermove', move);
+              bar.addEventListener('pointerup', up);
+              bar.addEventListener('pointercancel', up);
+            }}
+            onKeyDown={(e) => {
+              const step = e.key === 'ArrowRight' ? 10000 : e.key === 'ArrowLeft' ? -10000 : 0;
+              if (!step) return;
+              e.preventDefault();
+              const ms = Math.max(0, Math.min(tr.durationMs - 1000, progress + step));
+              setNp((cur) => (cur ? { ...cur, progressMs: ms, fetchedAt: Date.now() } : cur));
+              control(() => seekHere(ms));
+            }}
+          >
+            <div style={{ width: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%` }} />
+            <i className="np-knob" style={{ left: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%` }} />
           </div>
           <div className="np-time muted">
-            <span>{mmss(progress)}</span>
+            <span>{mmss(scrub != null ? scrub * tr.durationMs : progress)}</span>
             <span>{mmss(tr.durationMs)}</span>
           </div>
           <div className="np-actions">
@@ -160,12 +233,81 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOn
             <button className="btn-ghost sm" onClick={() => onShowOnGlobe(tr)}>
               Show on globe
             </button>
+            <button className="btn-ghost sm" onClick={onLibrary}>
+              ♥ Library
+            </button>
           </div>
           <label className="np-follow">
             <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
             Follow my music on the globe
           </label>
         </>
+      )}
+
+      {canQueue() && (
+        <div className="np-player">
+          <div className="np-ctl">
+            <button aria-label="Previous" onClick={() => control(() => previousTrack())}>⏮</button>
+            <button
+              className="np-ctl-main"
+              aria-label={np?.playing ? 'Pause' : 'Play'}
+              onClick={() =>
+                control(async () =>
+                  sdk.active ? togglePlayHere() : np?.playing ? pausePlayback() : resumePlayback(await ensureDevice())
+                )
+              }
+            >
+              {np?.playing ? '❚❚' : '▶'}
+            </button>
+            <button aria-label="Next" onClick={() => control(() => nextTrack())}>⏭</button>
+            {tr && (
+              <button
+                className="np-skip"
+                aria-label="Forward 15 seconds"
+                title="Forward 15s"
+                onClick={() => {
+                  const ms = Math.min(tr.durationMs - 1000, progress + 15000);
+                  setNp((cur) => (cur ? { ...cur, progressMs: ms, fetchedAt: Date.now() } : cur));
+                  control(() => seekHere(ms));
+                }}
+              >
+                +15
+              </button>
+            )}
+            {canStream() ? (
+              sdk.active ? (
+                <span className="np-here on">● Playing in Listener Atlas</span>
+              ) : (
+                <button className="np-here" disabled={sdk.loading} onClick={() => control(() => playHere())}>
+                  {sdk.loading ? 'Connecting…' : '⇣ Play here'}
+                </button>
+              )
+            ) : (
+              <button
+                className="np-here"
+                title="Needs one more Spotify permission"
+                onClick={async () => {
+                  logout();
+                  await login();
+                }}
+              >
+                Reconnect to play here
+              </button>
+            )}
+          </div>
+          <label className="np-follow">
+            <input
+              type="checkbox"
+              checked={autoPause}
+              onChange={(e) => {
+                setAutoPause(e.target.checked);
+                setAutoPauseState(e.target.checked);
+              }}
+            />
+            Pause my Spotify while I preview songs here
+          </label>
+          {(ctlErr || sdk.error) && <div className="status err">{ctlErr || sdk.error}</div>}
+        </div>
       )}
       {error && <div className="status err">{error}</div>}
     </div>

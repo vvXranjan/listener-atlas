@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { everyWhileVisible } from './visibility.js';
 
 const POLL_MS = 10000;
 
@@ -37,12 +38,11 @@ export default function LiveTicker({ onArtist }) {
         if (!stop) setError(true);
       }
     }
-    poll();
-    const t = setInterval(poll, POLL_MS);
-    const c = setInterval(() => setNow(Date.now()), 1000);
+    const off = everyWhileVisible(poll, POLL_MS); // paused while the tab is hidden
+    const c = setInterval(() => !document.hidden && setNow(Date.now()), 1000);
     return () => {
       stop = true;
-      clearInterval(t);
+      off();
       clearInterval(c);
     };
   }, []);

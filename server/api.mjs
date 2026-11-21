@@ -5,7 +5,7 @@
 //  - Albums/songs:  iTunes Search API
 // Everything is cached in memory so we stay polite to these services.
 
-import cities from 'all-the-cities';
+import { fetchT as fetch } from './http.mjs';
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15' };
 const regionName = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -35,13 +35,21 @@ async function getJSON(url) {
 }
 
 // ---------- city search (offline) ----------
-const byPop = [...cities].filter((c) => c.population >= 50000).sort((a, b) => b.population - a.population);
+// The world city list is big: load it only the first time a city route needs it
+let byPop = null;
+async function cityIndex() {
+  if (!byPop) {
+    const { default: cities } = await import('all-the-cities');
+    byPop = cities.filter((c) => c.population >= 50000).sort((a, b) => b.population - a.population);
+  }
+  return byPop;
+}
 
-export function searchCities(q, limit = 8) {
+export async function searchCities(q, limit = 8) {
   const s = strip(q);
   if (!s) return [];
   const out = [];
-  for (const c of byPop) {
+  for (const c of await cityIndex()) {
     if (strip(c.name).startsWith(s)) {
       out.push({
         name: c.name,
@@ -137,6 +145,7 @@ async function fetchChart({ sf, slug, id }) {
 }
 
 export async function getCityChart(name, cc) {
+  const byPop = await cityIndex();
   let city = null;
   if (cc) {
     city = byPop.find((c) => c.country === cc.toUpperCase() && strip(c.name) === strip(name));

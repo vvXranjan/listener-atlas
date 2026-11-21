@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { stopPreview, stopOthers } from './player.js';
 import { tempoGap } from './audioAnalysis.js';
+import { setAppAudio } from './spotifyPlayer.js';
 
 // "Hear the transition": plays the end of song A, then fades into song B
 // like a DJ would. If the tempos are close (within 8%), song B is sped up
@@ -20,6 +21,7 @@ export function stopMix() {
   stopFn?.();
   stopFn = null;
   state = null;
+  setAppAudio('mix', false);
   emit();
 }
 stopOthers.add(stopMix);
@@ -87,6 +89,7 @@ export function playMix(id, from, to) {
     b.src = '';
   };
 
+  setAppAudio('mix', true);
   state = { id, phase: 'loading', progress: 0, rate };
   emit();
   const start = () => {

@@ -1,52 +1,67 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { analyzePreview, transitionScore, transitionTip, tempoGap, keyScore } from './audioAnalysis.js';
+import React, { useEffect, useMemo, useState } from 'react';
+import { transitionScore, transitionTip } from './audioAnalysis.js';
 import { playMix, stopMix, useMix } from './mixPlayer.js';
-import { togglePreview, usePlaying } from './player.js';
-import { canQueue, queueSong, isLoggedIn, logout, login } from './spotify.js';
-
-const SET_KEY = 'mixlab-set-v1';
-const idOf = (s) => `${s.title}|${s.artist}`.toLowerCase();
-const firstArtist = (a) => a.split(/,|&| with | feat\.? /i)[0].trim();
-const spotifySearch = (s) =>
-  `https://open.spotify.com/search/${encodeURIComponent(`${s.title.replace(/\s*[([].*?[)\]]/g, '')} ${firstArtist(s.artist)}`)}`;
-
-function loadSet() {
-  try {
-    return JSON.parse(localStorage.getItem(SET_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-async function getJson(url) {
-  const r = await fetch(url);
-  if (!r.headers.get('content-type')?.includes('json')) throw new Error('Data server not running the new code. Restart npm run dev.');
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error || `Error ${r.status}`);
-  return j;
-}
+import { togglePreview, usePlaying, stopPreview } from './player.js';
+import { mixOnSpotify } from './spotifyPlayer.js';
+import { canQueue, queueSong, isLoggedIn, logout, login, canLibrary, likedSongs } from './spotify.js';
+import { getSet, onSetChange, addToSet as addSong } from './setStore.js';
+import SetPanel from './SetPanel.jsx';
+import { idOf, firstArtist, spotifySearch, getJson, useNowItem, useAnalyses, Chips, Score, MixBar } from './mixParts.jsx';
 
 // Mix Lab: the best next songs for a smooth transition, plus your own set.
-export default function MixLab({ track, onArtist, onClose }) {
-  const [start, setStart] = useState(null); // the song playing now, with a preview
-  const [set, setSet] = useState(loadSet);
+export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, floatingSet, onDock }) {
+  const start = useNowItem(track); // the song playing now, with a preview
+  const [set, setSetState] = useState(getSet);
+  const [lib, setLib] = useState(null); // songs from your Liked Songs to try as next picks
   const [recs, setRecs] = useState({}); // anchor id -> recommend result
-  const [an, setAn] = useState({}); // preview url -> analysis | 'busy' | 'fail'
-  const anRef = useRef({});
+  const { an, analyse, withAudio } = useAnalyses();
   const [more, setMore] = useState(false);
   const [queued, setQueued] = useState({}); // id -> 'busy' | 'ok' | error
-  const [queueAll, setQueueAll] = useState(null);
+  const [live, setLive] = useState({}); // id -> step text while mixing on Spotify
   const mix = useMix();
   const playing = usePlaying();
 
-  // keep the set between visits
-  useEffect(() => {
+  // the set is shared with the Library popup and saved in this browser
+  useEffect(() => onSetChange(setSetState), []);
+
+  // try your own Liked Songs as next picks (great when open data is thin)
+  async function loadLibrary() {
+    setLib({ loading: true, step: 'Reading your Liked Songs…' });
     try {
-      localStorage.setItem(SET_KEY, JSON.stringify(set));
-    } catch {
-      /* storage blocked */
+      const { items } = await likedSongs(0);
+      const inSet = new Set(chain.map(idOf));
+      const pick = items.filter((t) => !inSet.has(idOf(t))).slice(0, 16);
+      const out = [];
+      let done = 0;
+      // look up previews two at a time (Apple limits how fast we can ask)
+      const work = [...pick];
+      await Promise.all(
+        [0, 1].map(async () => {
+          while (work.length) {
+            const t = work.shift();
+            const qs = new URLSearchParams({ title: t.title, artist: firstArtist(t.artist) });
+            const p = await getJson(`/api/preview?${qs}`).catch(() => null);
+            done += 1;
+            setLib({ loading: true, step: `Finding previews… ${done}/${pick.length}` });
+            if (p?.preview) {
+              out.push({
+                ...t,
+                cover: t.cover || p.coverHq,
+                preview: p.preview,
+                match: 50,
+                source: 'library',
+                why: 'From your Liked Songs.',
+                spotifySearch: t.url || spotifySearch(t),
+              });
+            }
+          }
+        })
+      );
+      setLib({ items: out });
+    } catch (e) {
+      setLib({ error: e.message });
     }
-  }, [set]);
+  }
 
   useEffect(() => () => stopMix(), []);
   useEffect(() => {
@@ -54,42 +69,6 @@ export default function MixLab({ track, onArtist, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  // the now-playing song needs a preview for the audio analysis
-  useEffect(() => {
-    if (!track) return setStart(null);
-    const base = {
-      title: track.name,
-      artist: track.artists.map((a) => a.name).join(', '),
-      cover: track.cover,
-      now: true,
-    };
-    setStart(base);
-    const qs = new URLSearchParams({ title: base.title, artist: track.artists[0].name });
-    getJson(`/api/preview?${qs}`)
-      .then((p) => setStart({ ...base, preview: p.preview, cover: base.cover || p.coverHq }))
-      .catch(() => {});
-  }, [track?.id, track?.name]);
-
-  const analyse = useCallback((url) => {
-    if (!url || anRef.current[url]) return;
-    anRef.current[url] = 'busy';
-    setAn((m) => ({ ...m, [url]: 'busy' }));
-    analyzePreview(url)
-      .then((r) => r || 'fail')
-      .catch(() => 'fail')
-      .then((r) => {
-        anRef.current[url] = r;
-        setAn((m) => ({ ...m, [url]: r }));
-      });
-  }, []);
-  const withAudio = useCallback(
-    (s) => {
-      const a = s?.preview ? an[s.preview] : null;
-      return a && typeof a === 'object' ? { ...s, ...a, analysed: true } : { ...s, analysing: a === 'busy', failed: a === 'fail' };
-    },
-    [an]
-  );
 
   // the mix so far: now playing, then your set. Suggestions follow the last song.
   const chain = useMemo(() => (start ? [start, ...set] : set), [start, set]);
@@ -106,43 +85,26 @@ export default function MixLab({ track, onArtist, onClose }) {
       .catch((e) => setRecs((r) => ({ ...r, [anchorId]: { error: e.message } })));
   }, [anchorId]);
 
-  // analyse the anchor and the candidates (one at a time, cached)
+  // measure the current song first, then the best-matching candidates (cached after once)
   useEffect(() => {
-    analyse(anchor?.preview);
-    (rec?.pool || []).forEach((p) => analyse(p.preview));
-  }, [anchor?.preview, rec?.pool, analyse]);
-  useEffect(() => {
-    chain.forEach((s) => analyse(s.preview));
-  }, [chain, analyse]);
+    analyse(anchor?.preview, 0);
+    [...(rec?.pool || [])].sort((a, b) => b.match - a.match).forEach((p, i) => analyse(p.preview, 1 + i));
+    (lib?.items || []).forEach((p, i) => analyse(p.preview, 20 + i));
+  }, [anchor?.preview, rec?.pool, lib?.items, analyse]);
 
   const from = withAudio(anchor);
   const inChain = new Set(chain.map(idOf));
-  const ranked = (rec?.pool || [])
+  const ranked = [...(rec?.pool || []), ...(lib?.items || []).filter((x) => !(rec?.pool || []).some((p) => idOf(p) === idOf(x)))]
     .filter((p) => !inChain.has(idOf(p)))
     .map((p) => {
       const to = withAudio(p);
       return { ...to, score: transitionScore(from, to), tip: to.analysed && from.analysed ? transitionTip(from, to) : null };
     })
     .sort((a, b) => b.score - a.score || b.match - a.match);
-  const pending = (rec?.pool || []).filter((p) => p.preview && (!an[p.preview] || an[p.preview] === 'busy')).length;
+  const pending = [...(rec?.pool || []), ...(lib?.items || [])].filter((p) => p.preview && (!an[p.preview] || an[p.preview] === 'busy')).length;
   const shown = more ? ranked : ranked.slice(0, 4);
 
-  const addToSet = (s) =>
-    setSet((cur) =>
-      cur.some((x) => idOf(x) === idOf(s))
-        ? cur
-        : [...cur, { title: s.title, artist: s.artist, cover: s.cover, preview: s.preview, appleUrl: s.appleUrl || null }]
-    );
-  const move = (i, d) =>
-    setSet((cur) => {
-      const n = [...cur];
-      const j = i + d;
-      if (j < 0 || j >= n.length) return cur;
-      [n[i], n[j]] = [n[j], n[i]];
-      return n;
-    });
-  const remove = (i) => setSet((cur) => cur.filter((_, k) => k !== i));
-
+  const addToSet = (s) => addSong(s);
   async function queue(s) {
     const id = idOf(s);
     setQueued((q) => ({ ...q, [id]: 'busy' }));
@@ -155,22 +117,18 @@ export default function MixLab({ track, onArtist, onClose }) {
       return false;
     }
   }
-  async function queueWholeSet() {
-    let done = 0;
-    for (const s of set) {
-      setQueueAll(`Adding ${done + 1} of ${set.length}…`);
-      if (queued[idOf(s)] !== 'ok') {
-        const ok = await queue(s);
-        if (!ok) {
-          setQueueAll(`Stopped at "${s.title}". See the error below it.`);
-          return;
-        }
-      }
-      done += 1;
+  // the real thing: fade your Spotify into this song
+  async function mixLive(s) {
+    const id = idOf(s);
+    stopMix();
+    stopPreview();
+    try {
+      const name = await mixOnSpotify(s.title, s.artist, (step) => setLive((l) => ({ ...l, [id]: step })), s.uri);
+      setLive((l) => ({ ...l, [id]: `✓ Now playing ${name} on your Spotify` }));
+    } catch (e) {
+      setLive((l) => ({ ...l, [id]: `⚠ ${e.message}` }));
     }
-    setQueueAll(`✓ ${done} songs added to your Spotify queue, in order.`);
   }
-
   const loggedIn = isLoggedIn();
   const queueReady = loggedIn && canQueue();
 
@@ -204,6 +162,9 @@ export default function MixLab({ track, onArtist, onClose }) {
           <h2>What should play next?</h2>
           <div className="muted">
             Songs real listeners play together, ranked by how smoothly they blend: tempo, key and energy.
+          </div>
+          <div className="ml-hint">
+            ▶ Hear the transition = quick preview here (your Spotify pauses). ⇄ Mix into it = fades your real Spotify into the song.
           </div>
         </header>
 
@@ -252,7 +213,7 @@ export default function MixLab({ track, onArtist, onClose }) {
                   const id = idOf(p);
                   const mixing = mix?.id === id;
                   return (
-                    <li key={id} className={mixing || playing === p.preview ? 'on' : ''}>
+                    <li key={`${id}|${i}`} className={mixing || playing === p.preview ? 'on' : ''}>
                       <span className="un-rank">{i + 1}</span>
                       <button className="un-cover" disabled={!p.preview} onClick={() => togglePreview(p.preview)} title="Play 30s preview">
                         {p.cover ? <img src={p.cover} alt="" /> : <div className="ph" />}
@@ -280,11 +241,17 @@ export default function MixLab({ track, onArtist, onClose }) {
                           >
                             {mixing ? '■ Stop' : '▶ Hear the transition'}
                           </button>
+                          {queueReady && (
+                            <button className="btn-ghost sm ml-live" onClick={() => mixLive(p)} title="Fade your Spotify into this song">
+                              ⇄ Mix into it on Spotify
+                            </button>
+                          )}
                           <button className="btn-ghost sm" onClick={() => addToSet(p)}>
                             + Add to set
                           </button>
                           <QueueBtn s={p} />
                         </div>
+                        {live[id] && <div className={`ml-livestep ${live[id].startsWith('⚠') ? 'err' : ''}`}>{live[id]}</div>}
                         {queued[id] && !['ok', 'busy'].includes(queued[id]) && <div className="status err">{queued[id]}</div>}
                       </div>
                     </li>
@@ -296,6 +263,31 @@ export default function MixLab({ track, onArtist, onClose }) {
                   {more ? 'Show top 4 only' : `Show ${ranked.length - 4} more`} ›
                 </button>
               )}
+              {isLoggedIn() && !lib?.items && (
+                <div className="ml-libcta">
+                  {canLibrary() ? (
+                    <button className="btn-ghost sm ml-live" disabled={lib?.loading} onClick={loadLibrary}>
+                      {lib?.loading ? lib.step : '♥ Find best next in my Liked Songs'}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn-ghost sm"
+                      onClick={async () => {
+                        logout();
+                        await login();
+                      }}
+                    >
+                      Reconnect Spotify to use your Liked Songs
+                    </button>
+                  )}
+                  {lib?.error && <div className="status err">{lib.error}</div>}
+                </div>
+              )}
+              {lib?.items && (
+                <div className="ml-livestep">
+                  ♥ Added {lib.items.length} of your Liked Songs to the ranking (tagged "From your Liked Songs").
+                </div>
+              )}
               {rec?.candidates > 0 && (
                 <div className="foot">
                   From {rec.candidates} songs ListenBrainz listeners play with this one
@@ -306,210 +298,23 @@ export default function MixLab({ track, onArtist, onClose }) {
             </section>
           )}
 
-          <section className="ml-set">
-            <h3 className="ml-h">
-              Your set <span className="ml-count">{set.length}</span>
-              {set.length > 0 && (
-                <button className="link-btn ml-clear" onClick={() => setSet([])}>
-                  Clear
+          {floatingSet ? (
+            <section className="ml-set">
+              <h3 className="ml-h">
+                Your set <span className="ml-count">{set.length}</span>
+              </h3>
+              <div className="muted">
+                Your set is in its own floating window.{' '}
+                <button className="link-btn" onClick={onDock}>
+                  Put it back here
                 </button>
-              )}
-            </h3>
-            {!set.length && <div className="muted">Add picks or any song you like. Each new song gets its own best-next ideas.</div>}
-
-            {chain.length > 0 && set.length > 0 && (
-              <ol className="ml-chain">
-                {chain.map((s, i) => {
-                  const cur = withAudio(s);
-                  const prev = i ? withAudio(chain[i - 1]) : null;
-                  const setIdx = start ? i - 1 : i;
-                  return (
-                    <React.Fragment key={idOf(s) + i}>
-                      {prev && <Link from={prev} to={cur} />}
-                      <li className={s.now ? 'now' : ''}>
-                        {s.cover ? <img src={s.cover} alt="" /> : <div className="ph" />}
-                        <div className="un-body">
-                          <div className="un-title">
-                            {s.now && <span className="ml-now">NOW</span>}
-                            {s.title}
-                          </div>
-                          <div className="tr-artist">{s.artist}</div>
-                          <Chips a={cur} small noPreview={!s.preview} />
-                          {queued[idOf(s)] && !['ok', 'busy'].includes(queued[idOf(s)]) && (
-                            <div className="status err">{queued[idOf(s)]}</div>
-                          )}
-                        </div>
-                        {!s.now && (
-                          <div className="ml-ctrl">
-                            <button onClick={() => move(setIdx, -1)} disabled={setIdx === 0} aria-label="Move up">
-                              ↑
-                            </button>
-                            <button onClick={() => move(setIdx, 1)} disabled={setIdx === set.length - 1} aria-label="Move down">
-                              ↓
-                            </button>
-                            <button onClick={() => remove(setIdx)} aria-label="Remove">
-                              ×
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    </React.Fragment>
-                  );
-                })}
-              </ol>
-            )}
-
-            {set.length > 0 && (
-              <div className="ml-setbar">
-                {queueReady ? (
-                  <button className="btn-green" onClick={queueWholeSet}>
-                    Queue all in Spotify
-                  </button>
-                ) : loggedIn ? (
-                  <button
-                    className="btn-green"
-                    onClick={async () => {
-                      logout();
-                      await login();
-                    }}
-                  >
-                    Reconnect Spotify to queue
-                  </button>
-                ) : (
-                  <span className="muted">Connect Spotify to send this set to your queue.</span>
-                )}
-                {queueAll && <span className="ml-qstatus">{queueAll}</span>}
               </div>
-            )}
-
-            <SongSearch onAdd={addToSet} inSet={inChain} />
-          </section>
+            </section>
+          ) : (
+            <SetPanel start={start} onLibrary={onLibrary} onFloat={onFloat} />
+          )}
         </div>
       </aside>
-    </div>
-  );
-}
-
-function Chips({ a, rel, small, noPreview }) {
-  if (noPreview) return <div className="ml-chips"><span className="ml-chip dim">No preview to measure</span></div>;
-  if (a.failed) return <div className="ml-chips"><span className="ml-chip dim">Couldn't measure this preview</span></div>;
-  if (!a.analysed) {
-    return (
-      <div className="ml-chips">
-        <span className="ml-chip dim pulse">Measuring tempo &amp; key…</span>
-      </div>
-    );
-  }
-  const gap = rel?.analysed ? tempoGap(rel.bpm, a.bpm) : null;
-  const ks = rel?.analysed ? keyScore(rel.key?.camelot, a.key?.camelot) : null;
-  return (
-    <div className={`ml-chips ${small ? 'sm' : ''}`}>
-      {a.bpm && (
-        <span className={`ml-chip ${gap != null ? (gap <= 3 ? 'good' : gap <= 8 ? 'ok' : 'bad') : ''}`} title="Tempo (beats per minute)">
-          {Math.round(a.bpm)} BPM
-        </span>
-      )}
-      {a.key && (
-        <span className={`ml-chip ${ks != null ? (ks >= 0.85 ? 'good' : ks >= 0.5 ? 'ok' : 'bad') : ''}`} title={`Key: ${a.key.name} (Camelot ${a.key.camelot})`}>
-          {a.key.camelot} · {a.key.name}
-        </span>
-      )}
-      {a.energy != null && (
-        <span className="ml-chip" title="Energy (loudness)">
-          ⚡ <span className="ml-energy"><span style={{ width: `${a.energy}%` }} /></span>
-        </span>
-      )}
-    </div>
-  );
-}
-
-function Score({ value, live }) {
-  const r = 17;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className={`ml-score ${live ? '' : 'est'}`} title={live ? 'Transition score' : 'Listening data only, audio still being measured'}>
-      <svg viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r={r} className="bg" />
-        <circle cx="20" cy="20" r={r} className="fg" strokeDasharray={`${(value / 100) * c} ${c}`} />
-      </svg>
-      <b>{value}</b>
-      <span>blend</span>
-    </div>
-  );
-}
-
-function Link({ from, to }) {
-  const ready = from.analysed && to.analysed;
-  const score = transitionScore(from, { ...to, match: to.match ?? 60 });
-  return (
-    <li className="ml-link">
-      <span className={`ml-link-score ${!ready ? 'dim' : score >= 75 ? 'good' : score >= 55 ? 'ok' : 'bad'}`}>
-        {ready ? `${score}` : '··'}
-      </span>
-      <span className="ml-link-tip">{ready ? transitionTip(from, to) : 'Measuring…'}</span>
-    </li>
-  );
-}
-
-function MixBar({ mix }) {
-  const label = mix.phase === 'loading' ? 'Loading…' : mix.phase === 'a' ? 'Song A' : mix.phase === 'fade' ? 'Crossfading' : 'Song B';
-  return (
-    <div className="ml-mixbar">
-      <div className="ml-mixtrack">
-        <span style={{ width: `${(mix.progress || 0) * 100}%` }} />
-        <i style={{ left: `${(7 / 21) * 100}%`, width: `${(6 / 21) * 100}%` }} />
-      </div>
-      <span>
-        {label}
-        {mix.rate && Math.abs(mix.rate - 1) > 0.005 ? ` · tempo matched ${mix.rate > 1 ? '+' : ''}${Math.round((mix.rate - 1) * 100)}%` : ''}
-      </span>
-    </div>
-  );
-}
-
-function SongSearch({ onAdd, inSet }) {
-  const [q, setQ] = useState('');
-  const [res, setRes] = useState(null);
-  const playing = usePlaying();
-  useEffect(() => {
-    if (q.trim().length < 2) return setRes(null);
-    const t = setTimeout(() => {
-      setRes({ loading: true });
-      getJson(`/api/song-search?q=${encodeURIComponent(q.trim())}`)
-        .then((list) => setRes({ list }))
-        .catch((e) => setRes({ error: e.message }));
-    }, 350);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  return (
-    <div className="ml-search">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add any song: search title or artist…" />
-      {res?.loading && <div className="muted">Searching…</div>}
-      {res?.error && <div className="status err">{res.error}</div>}
-      {res?.list?.length === 0 && <div className="muted">No songs found.</div>}
-      {res?.list?.length > 0 && (
-        <ul>
-          {res.list.slice(0, 6).map((s) => {
-            const added = inSet.has(idOf(s));
-            return (
-              <li key={idOf(s) + s.album}>
-                <button className="un-cover sm" disabled={!s.preview} onClick={() => togglePreview(s.preview)}>
-                  {s.cover ? <img src={s.cover} alt="" /> : <div className="ph" />}
-                  {s.preview && <span className="tr-play">{playing === s.preview ? '❚❚' : '▶'}</span>}
-                </button>
-                <div className="un-body">
-                  <div className="un-title">{s.title}</div>
-                  <div className="tr-artist">{s.artist}</div>
-                </div>
-                <button className="btn-ghost sm" disabled={added} onClick={() => onAdd(s)}>
-                  {added ? '✓ Added' : '+ Add'}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }

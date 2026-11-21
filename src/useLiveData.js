@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import bundled from './data/live.json';
+import { everyWhileVisible } from './visibility.js';
 
 const POLL_MS = 60 * 1000;
 
@@ -38,11 +39,10 @@ export function useLiveData() {
         if (!stop) setServer((s) => ({ ...s, online: false }));
       }
     }
-    poll();
-    const t = setInterval(poll, POLL_MS);
+    const off = everyWhileVisible(poll, POLL_MS); // paused while the tab is hidden
     return () => {
       stop = true;
-      clearInterval(t);
+      off();
     };
   }, []);
 

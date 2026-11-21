@@ -10,6 +10,7 @@
 
 import { cleanTitle, findRecordingIds, acrLookupFull, artistMbid } from './song.mjs';
 import { strip } from './api.mjs';
+import { fetchT as fetch } from './http.mjs';
 
 const LABS = 'https://labs.api.listenbrainz.org/similar-recordings/json';
 const ARTIST_ALGO = 'session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30';
@@ -91,6 +92,9 @@ export function explain(c, current) {
   if (c.source === 'similar-artist') {
     return { why: `Fans of ${current.artists[0]} also play ${c.viaArtist} a lot. This is one of their biggest songs.`, tags: ['Similar artist'] };
   }
+  if (c.catalogue) {
+    return { why: `More from ${current.artists[0]}. Open listening data is thin for this song, so these come from the artist's catalogue.`, tags: ['Same artist'] };
+  }
   if (c.source === 'same-artist') {
     return { why: `One of ${current.artists[0]}'s most played songs. A safe, smooth follow-up.`, tags: ['Same artist'] };
   }
@@ -157,6 +161,7 @@ export async function artistCandidates(current, mbid) {
 // 30-second preview + Apple link + genre from iTunes (free; cached because iTunes rate-limits)
 const enrichCache = new Map();
 async function enrich(c) {
+  if (c.preview) return c; // already has everything (catalogue songs)
   const hit = enrichCache.get(c.key);
   if (hit) return { ...c, ...hit };
   const extra = await itunesSong(c.title, c.artist);
@@ -296,6 +301,40 @@ export async function recommend(title, artists, env = process.env) {
       }
     } catch {
       /* fallback is best-effort */
+    }
+  }
+
+  // 3) still nothing (artist missing from open data)? use their catalogue on Apple Music
+  if (!merged.length) {
+    try {
+      const { itunesArtistSongs } = await import('./galaxy.mjs');
+      const cur = cleanTitle(title);
+      let j = 0;
+      for (const [k, t] of await itunesArtistSongs(artists[0])) {
+        if (k === cur) continue;
+        merged.push({
+          key: `${k}|${mainArtist(t.artistName)}`,
+          title: t.trackName,
+          artist: t.artistName,
+          album: t.collectionName,
+          cover: t.artworkUrl100?.replace('100x100bb', '300x300bb') || null,
+          coverHq: t.artworkUrl100?.replace('100x100bb', '300x300bb') || null,
+          preview: t.previewUrl,
+          appleUrl: t.trackViewUrl,
+          genre: t.primaryGenreName,
+          year: t.releaseDate?.slice(0, 4),
+          source: 'same-artist',
+          catalogue: true,
+          sameArtist: true,
+          match: 50 - Math.min(20, j * 2),
+          recent: 0,
+          longTerm: 0,
+        });
+        if (++j >= 10) break;
+      }
+      if (j) sources.push('catalogue');
+    } catch {
+      /* best-effort */
     }
   }
 

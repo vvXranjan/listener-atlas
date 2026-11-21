@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { setAppAudio } from './spotifyPlayer.js';
 
 // One shared audio element for 30-second previews
 const audio = typeof Audio !== 'undefined' ? new Audio() : null;
@@ -10,6 +11,7 @@ if (audio) {
   audio.volume = 0.8;
   audio.addEventListener('ended', () => {
     current = null;
+    setAppAudio('preview', false);
     emit();
   });
 }
@@ -21,6 +23,7 @@ export function stopPreview() {
   if (!audio || !current) return;
   audio.pause();
   current = null;
+  setAppAudio('preview', false);
   emit();
 }
 
@@ -30,10 +33,12 @@ export function togglePreview(url) {
   if (current === url) {
     audio.pause();
     current = null;
+    setAppAudio('preview', false);
   } else {
     audio.src = url;
     audio.play().catch(() => {});
     current = url;
+    setAppAudio('preview', true);
   }
   emit();
 }

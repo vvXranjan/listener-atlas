@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { MapLibreOverlay } from '@deck.gl/maplibre';
-import { ColumnLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { GlobeBars, MapLabels, HoverTip, fmt } from './GlobeLayers.jsx';
+import { attachPerf, usePerf, setPerfMode, getQuality, pixelRatioFor } from './perf.js';
 import { useLiveData, timeAgo } from './useLiveData.js';
 import CitySearch from './CitySearch.jsx';
 import CityCard from './CityCard.jsx';
@@ -11,7 +12,14 @@ import LiveTicker from './LiveTicker.jsx';
 import Shazam from './Shazam.jsx';
 import NowPlaying from './NowPlaying.jsx';
 import SongDrawer from './SongDrawer.jsx';
-import MixLab from './MixLab.jsx';
+import Safe from './Safe.jsx';
+// big panels load only when you first open them (faster start)
+const MixLab = lazy(() => import('./MixLab.jsx'));
+const ArtistGalaxy = lazy(() => import('./ArtistGalaxy.jsx'));
+const Library = lazy(() => import('./Library.jsx'));
+const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
+import { useNowItem } from './mixParts.jsx';
+import { startSetSync } from './setSync.js';
 import { getArtistCities, toStates, SAMPLE_ARTISTS } from './data.js';
 import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
@@ -22,36 +30,7 @@ const ALL = 'ALL';
 const SERVER_HINT =
   "The data server isn't running the new code. In Terminal: press Ctrl+C, then run npm install and npm run dev.";
 
-const fmt = (n) =>
-  n >= 1e9
-    ? (n / 1e9).toFixed(2) + 'B'
-    : n >= 1e6
-    ? (n / 1e6).toFixed(1) + 'M'
-    : n >= 1e3
-    ? Math.round(n / 1e3) + 'K'
-    : String(n);
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Deep green -> Spotify green -> neon mint -> white-hot (futuristic Spotify palette)
-const STOPS = [
-  [0, [8, 70, 48]],
-  [0.4, [30, 215, 96]],
-  [0.75, [110, 255, 170]],
-  [1, [225, 255, 238]],
-];
-function colorFor(value, max, alpha = 235) {
-  const t = Math.sqrt(value / max);
-  for (let i = 1; i < STOPS.length; i++) {
-    if (t <= STOPS[i][0]) {
-      const [t0, c0] = STOPS[i - 1];
-      const [t1, c1] = STOPS[i];
-      const k = (t - t0) / (t1 - t0);
-      return [...c0.map((v, j) => Math.round(v + (c1[j] - v) * k)), alpha];
-    }
-  }
-  return [...STOPS[STOPS.length - 1][1], alpha];
-}
 
 // ---------- data helpers ----------
 
@@ -120,19 +99,35 @@ export default function App() {
   const [input, setInput] = useState('');
   const [status, setStatus] = useState(null);
   const [zoom, setZoom] = useState(1.6);
-  const [viewCenter, setViewCenter] = useState([60, 20]);
   const [styleKey, setStyleKey] = useState('satellite');
   const [spin, setSpin] = useState(true);
   const [autopilot, setAutopilot] = useState(false);
   const [inView, setInView] = useState(null);
-  const [hover, setHover] = useState(null);
-  const [labels, setLabels] = useState([]);
   const [searchMode, setSearchMode] = useState('artist'); // 'artist' | 'city'
   const [city, setCity] = useState(null); // { name, loading, error, data }
   const [cityMoves, setCityMoves] = useState({});
   const [drawer, setDrawer] = useState(null);
   const [song, setSong] = useState(null); // song drawer
   const [mixLab, setMixLab] = useState(null); // Mix Lab: { track } or null
+  const [galaxy, setGalaxy] = useState(null); // artist name shown in the Artist Galaxy
+  const [library, setLibrary] = useState(false); // your Spotify library popup
+  const [nowTrack, setNowTrack] = useState(null); // what's playing on your Spotify
+  const { mode: perfMode, quality } = usePerf();
+  const nowItem = useNowItem(nowTrack);
+  useEffect(() => startSetSync(), []);
+  const [floatSet, setFloatSetState] = useState(() => {
+    try {
+      return localStorage.getItem('floatSet') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const setFloatSet = (v) => {
+    setFloatSetState(v);
+    try {
+      localStorage.setItem('floatSet', v ? '1' : '0');
+    } catch {}
+  };
   const [follow, setFollow] = useState(() => {
     try {
       return localStorage.getItem('followMusic') !== '0';
@@ -168,6 +163,8 @@ export default function App() {
       zoom: 1.6,
       maxPitch: 75,
       attributionControl: { compact: true },
+      pixelRatio: pixelRatioFor(getQuality()),
+      fadeDuration: 150, // labels fade in quicker
     });
     mapRef.current = map;
     window.__map = map; // handy for debugging
@@ -222,23 +219,8 @@ export default function App() {
     overlayRef.current = overlay;
     map.addControl(overlay);
 
-    map.on('zoom', () => setZoom(map.getZoom()));
-
-    // Track where the camera looks (every ~120 ms) so bars on the far side / edge of the
-    // globe can fade out and rise smoothly when they turn toward you.
-    let lastView = 0;
-    const trackView = () => {
-      const now = performance.now();
-      if (now - lastView < 120) return;
-      lastView = now;
-      const c = map.getCenter();
-      setViewCenter([Math.round(c.lng * 2) / 2, Math.round(c.lat * 2) / 2]);
-    };
-    map.on('move', trackView);
-    map.on('moveend', () => {
-      const c = map.getCenter();
-      setViewCenter([Math.round(c.lng * 2) / 2, Math.round(c.lat * 2) / 2]);
-    });
+    // bar sizes only need quarter-zoom steps: same value = no re-render
+    map.on('zoom', () => setZoom(Math.round(map.getZoom() * 4) / 4));
 
     // Which country is on screen?
     const updateInView = () => {
@@ -284,7 +266,9 @@ export default function App() {
       }, 4000);
     });
 
+    const offPerf = attachPerf(map); // watches frame rate, adjusts quality
     return () => {
+      offPerf();
       clearInterval(nightTimer);
       map.remove();
     };
@@ -341,115 +325,17 @@ export default function App() {
     : showDemoCities
     ? 220000
     : 700000 * kDemo;
-  // 1 = facing you, 0 = on the far side / edge of the globe (smooth in between)
-  const FULL_KM = 4200;
-  const ZERO_KM = 6400;
-  const visible = useMemo(() => {
-    const out = [];
-    for (const d of points) {
-      const dist = distanceKm(viewCenter, d.position);
-      let w = (ZERO_KM - dist) / (ZERO_KM - FULL_KM);
-      if (w <= 0) continue;
-      w = Math.min(1, w);
-      out.push({ ...d, w: w * w * (3 - 2 * w) });
-    }
-    return out;
-  }, [points, viewCenter]);
-  const elev = (d) => (d.listeners / max) * height * (d.w ?? 1);
-
-  // ---------- layers ----------
-  useEffect(() => {
-    if (!overlayRef.current) return;
-    overlayRef.current.setProps({
-      layers: [
-        new ScatterplotLayer({
-          id: 'glow',
-          data: visible,
-          getPosition: (d) => d.position,
-          getRadius: (d) => radius * (1.6 + Math.sqrt(d.listeners / max) * 1.6),
-          getFillColor: (d) => colorFor(d.listeners, max, Math.round(80 * d.w)),
-          stroked: true,
-          getLineColor: (d) => [30, 215, 96, Math.round(160 * d.w)],
-          lineWidthMinPixels: 1,
-          transitions: { getFillColor: 300 },
-          parameters: { depthWriteEnabled: false },
-          updateTriggers: { getRadius: [max, radius], getFillColor: [max, viewCenter], getLineColor: [viewCenter] },
-        }),
-        new ColumnLayer({
-          id: 'bars',
-          data: visible,
-          diskResolution: 32,
-          radius,
-          extruded: true,
-          pickable: true,
-          autoHighlight: true,
-          highlightColor: [255, 255, 255, 120],
-          material: { ambient: 0.7, diffuse: 0.5, shininess: 64, specularColor: [190, 255, 220] },
-          getPosition: (d) => d.position,
-          getElevation: elev,
-          getFillColor: (d) => colorFor(d.listeners, max, Math.round(240 * d.w)),
-          onHover: (info) => setHover(info.object ? { ...info.object, x: info.x, y: info.y } : null),
-          onClick: (info) => {
-            const d = info.object;
-            if (d?.city && d.country) openCity({ name: d.city, country: d.country, position: d.position }, false);
-          },
-          transitions: { getElevation: { duration: 600, enter: () => [0] }, getFillColor: 300 },
-          updateTriggers: { getElevation: [max, height, viewCenter], getFillColor: [max, viewCenter] },
-        }),
-      ],
-    });
-  }, [visible, max, radius, height]);
-
-  // ---------- HTML city labels (follow the map) ----------
-  const labelSrc = useRef([]);
-  const cityPos = useRef(null);
-  cityPos.current = city?.data?.position || city?.position || null;
-  const [pin, setPin] = useState(null);
+  // ---------- city labels, chart pins, the open-city pin ----------
   const [chartPins, setChartPins] = useState([]); // where the song you're playing is charting
-  const chartSrc = useRef([]);
-  chartSrc.current = chartPins;
-  const [chartPinPos, setChartPinPos] = useState([]);
-  labelSrc.current = zoom >= 3.4 ? [...points].sort((a, b) => b.listeners - a.listeners).slice(0, 30) : [];
-  // labels only for cities clearly facing you
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    let raf = 0;
-    const place = () => {
-      raf = 0;
-      const c = map.getCenter();
-      const here = [c.lng, c.lat];
-      const { clientWidth: w, clientHeight: h } = map.getContainer();
-      const out = [];
-      for (const d of labelSrc.current) {
-        if (distanceKm(here, d.position) > 4300) continue; // only cities facing you
-        const pt = map.project(d.position);
-        if (pt.x < -50 || pt.y < -50 || pt.x > w + 50 || pt.y > h + 50) continue;
-        // skip if it would overlap a bigger city's label
-        if (out.some((o) => Math.abs(o.x - pt.x) < 70 && Math.abs(o.y - pt.y) < 30)) continue;
-        out.push({ key: d.key || d.state, x: pt.x, y: pt.y, name: d.city || d.state, value: d.listeners });
-      }
-      setLabels(out);
-      setChartPinPos(
-        chartSrc.current
-          .filter((c) => distanceKm(here, c.position) < 4300)
-          .map((c) => ({ ...c, ...map.project(c.position) }))
-      );
-      if (cityPos.current && distanceKm(here, cityPos.current) < 7000) {
-        const p = map.project(cityPos.current);
-        setPin({ x: p.x, y: p.y });
-      } else setPin(null);
-    };
-    const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(place);
-    };
-    map.on('move', schedule);
-    schedule();
-    return () => {
-      map.off('move', schedule);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [points, zoom >= 3.4, city?.data?.position, city?.position, chartPins]);
+  const labelPoints = useMemo(
+    () => (zoom >= 3.4 ? [...points].sort((a, b) => b.listeners - a.listeners).slice(0, 30) : []),
+    [points, zoom >= 3.4]
+  );
+  const cityPos = city?.data?.position || city?.position || null;
+  // stable handlers, so the globe pieces don't re-render when the app does
+  const openCityRef = useRef(null);
+  const openCityFromMap = useCallback((c) => openCityRef.current?.(c, false), []);
+  const openCityPin = useCallback((c) => openCityRef.current?.(c), []);
 
   // ---------- "What is this city listening to?" ----------
   const cityReq = useRef(0);
@@ -463,6 +349,7 @@ export default function App() {
     return body;
   }
 
+  openCityRef.current = (c, fly) => openCity(c, fly);
   async function openCity(c, fly = true) {
     const req = ++cityReq.current;
     stopAutopilot();
@@ -817,61 +704,25 @@ export default function App() {
       <Starfield mapRef={mapRef} />
       <div ref={mapDiv} className="map" />
 
-      <div className="labels">
-        {labels.map((l) => (
-          <div key={l.key} className="label" style={{ transform: `translate(${l.x}px, ${l.y}px)` }}>
-            <span>{l.name}</span>
-            <b>{fmt(l.value)}</b>
-          </div>
-        ))}
-      </div>
-
-      {chartPinPos.map((c) => (
-        <div
-          key={c.city}
-          className="chart-pin"
-          style={{ transform: `translate(${c.x}px, ${c.y}px)` }}
-          onClick={() => openCity({ name: c.city, country: c.country, position: c.position })}
-        >
-          <span className="cp-dot" />
-          <span className="cp-text">
-            #{c.rank} {c.city}
-          </span>
-        </div>
-      ))}
-
-      {pin && (
-        <div className="city-pin" style={{ transform: `translate(${pin.x}px, ${pin.y}px)` }}>
-          <span className="ring" />
-          <span className="ring r2" />
-          <span className="dot-c" />
-          <span className="pin-name">{city?.data?.city || city?.name}</span>
-        </div>
-      )}
-
-      {hover && (
-        <div className="tip" style={{ left: hover.x + 14, top: hover.y + 14 }}>
-          <b>
-            {flag(hover.country)} {hover.city || hover.state}
-          </b>
-          <div className="tipnum">{fmt(hover.listeners)}</div>
-          <div className="muted">monthly listeners{hover.artists?.length > 1 ? ' (sum)' : ''}</div>
-          {hover.city && <div className="tip-hint">Click to see what {hover.city} is playing</div>}
-          {hover.artists?.length > 1 && (
-            <div className="tip-artists">
-              {[...hover.artists]
-                .sort((a, b) => b.listeners - a.listeners)
-                .slice(0, 4)
-                .map((a) => (
-                  <div key={a.name} className="row">
-                    <span>{a.name}</span>
-                    <span className="muted">{fmt(a.listeners)}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      )}
+      <GlobeBars
+        mapRef={mapRef}
+        overlayRef={overlayRef}
+        points={points}
+        max={max}
+        radius={radius}
+        height={height}
+        quality={quality}
+        onPickCity={openCityFromMap}
+      />
+      <MapLabels
+        mapRef={mapRef}
+        labelPoints={labelPoints}
+        chartPins={chartPins}
+        cityPos={cityPos}
+        cityName={city?.data?.city || city?.name}
+        onOpenCity={openCityPin}
+      />
+      <HoverTip />
 
       {/* ---------- left panel ---------- */}
       <div className="panel">
@@ -911,11 +762,13 @@ export default function App() {
               } catch {}
             }}
             onSongChange={(t) => {
+              setNowTrack(t);
               setChartPins([]);
               if (followRef.current) showSongOnGlobe(t);
             }}
             onDetails={(t) => setSong(t)}
             onMixLab={(t) => setMixLab({ track: t })}
+            onLibrary={(tab) => setLibrary(typeof tab === 'string' ? tab : 'liked')}
             onShowOnGlobe={(t) => showSongOnGlobe(t)}
           />
         )}
@@ -974,9 +827,14 @@ export default function App() {
               </div>
             ) : null}
             {live && current && (
-              <button className="link-btn" onClick={() => setDrawer(current)}>
-                View artist page ›
-              </button>
+              <span className="artist-links">
+                <button className="link-btn" onClick={() => setDrawer(current)}>
+                  View artist page ›
+                </button>
+                <button className="link-btn" onClick={() => setGalaxy(current.name)}>
+                  ✦ Galaxy ›
+                </button>
+              </span>
             )}
           </div>
         </div>
@@ -1120,7 +978,17 @@ export default function App() {
           </button>
         ))}
         <span className="sep" />
-        <button onClick={() => setMixLab({ track: null })}>🎛 Mix Lab</button>
+        <button onClick={() => setMixLab({ track: nowTrack })}>🎛 Mix Lab</button>
+        <button className={floatSet ? 'active' : ''} onClick={() => setFloatSet(!floatSet)}>
+          ⧉ Set
+        </button>
+        <button
+          className={perfMode !== 'auto' ? 'active' : ''}
+          title="Auto: lowers detail only if your Mac struggles · Smooth: always light · Quality: always full detail"
+          onClick={() => setPerfMode(perfMode === 'auto' ? 'smooth' : perfMode === 'smooth' ? 'quality' : 'auto')}
+        >
+          {perfMode === 'auto' ? `⚡ Auto${quality === 'smooth' ? ' · smooth' : ''}` : perfMode === 'smooth' ? '⚡ Smooth' : '✨ Quality'}
+        </button>
         <span className="sep" />
         <button className={spin ? 'active' : ''} onClick={toggleSpin}>
           {spin ? '⏸ Spinning' : '🌍 Globe'}
@@ -1132,8 +1000,12 @@ export default function App() {
 
       {autopilot && <div className="pilot-badge">● AUTOPILOT</div>}
 
-      <LiveTicker onArtist={openArtist} />
-      <Shazam onArtist={openArtist} />
+      <Safe name="Live ticker" quiet>
+        <LiveTicker onArtist={openArtist} />
+      </Safe>
+      <Safe name="Shazam" quiet>
+        <Shazam onArtist={openArtist} />
+      </Safe>
 
       <SongDrawer
         track={song}
@@ -1156,7 +1028,41 @@ export default function App() {
         onClose={() => setSong(null)}
       />
 
-      {mixLab && <MixLab track={mixLab.track} onArtist={(a) => openArtist(a)} onClose={() => setMixLab(null)} />}
+      {mixLab && (
+        <Safe name="Mix Lab" onClose={() => setMixLab(null)}>
+          <MixLab
+            track={nowTrack || mixLab.track}
+            onArtist={(a) => openArtist(a)}
+            onLibrary={(tab) => setLibrary(typeof tab === 'string' ? tab : 'liked')}
+            onFloat={() => setFloatSet(true)}
+            floatingSet={floatSet}
+            onDock={() => setFloatSet(false)}
+            onClose={() => setMixLab(null)}
+          />
+        </Safe>
+      )}
+      {floatSet && (
+        <Safe name="Your set" onClose={() => setFloatSet(false)} quiet>
+          <FloatingSet
+            start={nowItem}
+            onClose={() => setFloatSet(false)}
+            onDock={mixLab ? () => setFloatSet(false) : null}
+            onLibrary={(tab) => setLibrary(typeof tab === 'string' ? tab : 'liked')}
+          />
+        </Safe>
+      )}
+      {library && (
+        <Safe name="Library" onClose={() => setLibrary(false)}>
+          <Library
+            initialTab={library}
+            onClose={() => setLibrary(false)}
+            onMixLab={(t) => {
+              setLibrary(false);
+              setMixLab({ track: t });
+            }}
+          />
+        </Safe>
+      )}
 
       <ArtistDrawer
         artist={drawer}
@@ -1165,7 +1071,25 @@ export default function App() {
           setDrawer(null);
           showArtistOnGlobe(a);
         }}
+        onGalaxy={(n) => {
+          setDrawer(null);
+          setGalaxy(n);
+        }}
       />
+
+      {galaxy && (
+        <Safe name="Artist Galaxy" onClose={() => setGalaxy(null)}>
+          <ArtistGalaxy
+            key={galaxy}
+            name={galaxy}
+            onClose={() => setGalaxy(null)}
+            onMixLab={(t) => {
+              setGalaxy(null);
+              setMixLab({ track: t });
+            }}
+          />
+        </Safe>
+      )}
     </div>
   );
 }

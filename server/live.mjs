@@ -3,6 +3,7 @@
 //  - Song ID:       Shazam recognition, using the open-source shazamio-core fingerprinter (MIT)
 
 import { randomUUID } from 'node:crypto';
+import { fetchT as fetch } from './http.mjs';
 
 // ---------- ListenBrainz: what people are playing right now ----------
 let nowCache = { t: 0, v: null };

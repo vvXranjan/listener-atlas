@@ -9,7 +9,7 @@ const full = (n) => (n == null ? '—' : n.toLocaleString('en-US'));
 // A Spotify-style artist page.
 // Spotify numbers come from our data; the bio comes from Wikipedia; albums and
 // songs from iTunes; the playable "Popular" list is Spotify's own embed.
-export default function ArtistDrawer({ artist, onClose, onShowOnMap }) {
+export default function ArtistDrawer({ artist, onClose, onShowOnMap, onGalaxy }) {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const playing = usePlaying();
@@ -61,6 +61,11 @@ export default function ArtistDrawer({ artist, onClose, onShowOnMap }) {
 
         <div className="d-body">
           <div className="d-actions">
+            {onGalaxy && (
+              <button className="btn-green" onClick={() => onGalaxy(a.name)}>
+                ✦ Galaxy
+              </button>
+            )}
             {a.id && (
               <a className="btn-green" href={`https://open.spotify.com/artist/${a.id}`} target="_blank" rel="noreferrer">
                 Open in Spotify

@@ -171,8 +171,94 @@ export function detectEnergy(samples) {
   return Math.round(Math.max(0, Math.min(100, ((db + 30) / 24) * 100)));
 }
 
+// ---------- sound: bass (808s), space (reverb), brightness, punch ----------
+const pct = (arr, p) => {
+  const a = [...arr].sort((x, y) => x - y);
+  return a[Math.min(a.length - 1, Math.max(0, Math.floor(p * (a.length - 1))))] || 0;
+};
+const clamp100 = (v) => Math.round(Math.max(0, Math.min(100, v)));
+
+export function detectSound(samples, sampleRate) {
+  const size = 2048;
+  const frames = spectra(samples, size, size / 2);
+  if (frames.length < 8) return null;
+  const binHz = sampleRate / size;
+  const bassTop = Math.round(120 / binHz);
+  const top = Math.min(size / 2, Math.round(8000 / binHz));
+  let bass = 0;
+  let total = 0;
+  const centroids = [];
+  const levels = [];
+  const flux = [];
+  let prev = null;
+  for (const mag of frames) {
+    let e = 0;
+    let w = 0;
+    for (let k = 1; k < top; k++) {
+      const p = mag[k] * mag[k];
+      e += p;
+      w += p * k * binHz;
+      if (k <= bassTop) bass += p;
+    }
+    total += e;
+    if (e > 0) centroids.push(w / e);
+    levels.push(Math.sqrt(e));
+    if (prev) {
+      let f = 0;
+      for (let k = 1; k < top; k++) f += Math.max(0, mag[k] - prev[k]);
+      flux.push(f);
+    }
+    prev = mag;
+  }
+  const centroid = centroids.reduce((a, b) => a + b, 0) / Math.max(1, centroids.length);
+  // quiet moments that stay full = sound keeps ringing (reverb, pads); dry mixes drop to near silence
+  const sustain = pct(levels, 0.2) / (pct(levels, 0.9) || 1);
+  // how much the hits stand out from the rest
+  const crest = pct(flux, 0.97) / (flux.reduce((a, b) => a + b, 0) / Math.max(1, flux.length) || 1);
+  return {
+    bass: clamp100(((bass / (total || 1)) / 0.45) * 100), // 45%+ of energy under 120 Hz = maxed
+    space: clamp100(((sustain - 0.15) / 0.55) * 100),
+    brightness: clamp100(((centroid - 600) / 2400) * 100),
+    punch: clamp100(((crest - 1.8) / 4) * 100),
+  };
+}
+
+// Mood + sound labels from the numbers. Rough, rule-based, honest about it.
+export function describeVibe(a) {
+  if (!a) return { mood: null, moods: [], sound: [] };
+  const minor = a.key?.name?.endsWith('m');
+  const fast = a.bpm && (a.bpm >= 130 || (a.bpm >= 65 && a.bpm < 80)); // trap is often felt in half time
+  const s = a.sound || {};
+  const scores = {
+    Hype: (a.energy ?? 50) * 0.5 + (s.punch ?? 50) * 0.3 + (fast ? 20 : 0),
+    Dark: (minor ? 45 : 5) + (100 - (s.brightness ?? 50)) * 0.45 + (s.bass ?? 50) * 0.1,
+    Dreamy: (s.space ?? 0) * 0.75 + (100 - (s.punch ?? 50)) * 0.25,
+    Melodic: (s.brightness ?? 50) * 0.4 + (s.space ?? 0) * 0.3 + (100 - (s.punch ?? 50)) * 0.3,
+    Chill: (100 - (a.energy ?? 50)) * 0.6 + (100 - (s.punch ?? 50)) * 0.4,
+  };
+  const moods = Object.entries(scores)
+    .sort((x, y) => y[1] - x[1])
+    .filter(([, v], i) => i === 0 || v >= 55)
+    .slice(0, 2)
+    .map(([m]) => m);
+  const sound = [];
+  if ((s.bass ?? 0) >= 60) sound.push('Heavy 808s');
+  if ((s.space ?? 0) >= 55) sound.push('Spacey reverb');
+  if ((s.punch ?? 0) >= 60) sound.push('Hard drums');
+  if ((s.brightness ?? 50) >= 65) sound.push('Bright');
+  if ((s.brightness ?? 50) <= 25) sound.push('Murky');
+  if (a.bpm && a.bpm >= 65 && a.bpm < 80) sound.push('Half-time bounce');
+  return { mood: moods[0], moods, sound };
+}
+
 export function analyzeSamples(samples, sampleRate) {
-  return { bpm: detectBpm(samples, sampleRate), key: detectKey(samples, sampleRate), energy: detectEnergy(samples) };
+  const out = {
+    bpm: detectBpm(samples, sampleRate),
+    key: detectKey(samples, sampleRate),
+    energy: detectEnergy(samples),
+    sound: detectSound(samples, sampleRate),
+  };
+  return { ...out, vibe: describeVibe(out) };
 }
 
 // ---------- how well two songs blend ----------
@@ -227,6 +313,84 @@ export function transitionScore(from, to) {
   return Math.round((parts.reduce((a, [x, v]) => a + x * v, 0) / w) * 100);
 }
 
+// ---------- best order for a set ----------
+// Score of a whole order: the average blend of each step (start -> 1 -> 2 ...)
+export function flowScore(start, order, score = (a, b) => transitionScore(a, { ...b, match: 60 })) {
+  const seq = start ? [start, ...order] : order;
+  if (seq.length < 2) return null;
+  let t = 0;
+  for (let i = 1; i < seq.length; i++) t += score(seq[i - 1], seq[i]);
+  return Math.round(t / (seq.length - 1));
+}
+
+// Finds the smoothest order. Tries every order for up to 8 songs,
+// otherwise a smart guess (nearest neighbour + swapping pairs to improve).
+export function bestOrder(start, items, score = (a, b) => transitionScore(a, { ...b, match: 60 })) {
+  const n = items.length;
+  if (n < 2) return { order: items, score: flowScore(start, items, score) };
+  const memo = new Map();
+  const s = (a, b) => {
+    const k = `${items.indexOf(a)}>${items.indexOf(b)}`;
+    if (!memo.has(k)) memo.set(k, score(a, b));
+    return memo.get(k);
+  };
+  const total = (ord) => ord.reduce((t, x, i) => t + (i ? s(ord[i - 1], x) : start ? score(start, x) : 0), 0);
+  let best = items;
+  let bestT = total(items);
+  if (n <= 8) {
+    const used = new Array(n).fill(false);
+    const cur = [];
+    const walk = (t) => {
+      if (cur.length === n) {
+        if (t > bestT) {
+          bestT = t;
+          best = [...cur];
+        }
+        return;
+      }
+      for (let i = 0; i < n; i++) {
+        if (used[i]) continue;
+        const prev = cur[cur.length - 1];
+        const add = prev ? s(prev, items[i]) : start ? score(start, items[i]) : 0;
+        used[i] = true;
+        cur.push(items[i]);
+        walk(t + add);
+        cur.pop();
+        used[i] = false;
+      }
+    };
+    walk(0);
+  } else {
+    const left = [...items];
+    const ord = [];
+    let prev = start;
+    while (left.length) {
+      let bi = 0;
+      if (prev) left.forEach((x, i) => (score(prev, x) > score(prev, left[bi]) ? (bi = i) : 0));
+      prev = left.splice(bi, 1)[0];
+      ord.push(prev);
+    }
+    let improved = true;
+    let t = total(ord);
+    while (improved) {
+      improved = false;
+      for (let i = 0; i < n - 1; i++)
+        for (let j = i + 1; j < n; j++) {
+          const c = [...ord.slice(0, i), ...ord.slice(i, j + 1).reverse(), ...ord.slice(j + 1)];
+          const ct = total(c);
+          if (ct > t + 1e-9) {
+            ord.splice(0, n, ...c);
+            t = ct;
+            improved = true;
+          }
+        }
+    }
+    best = ord;
+    bestT = t;
+  }
+  return { order: best, score: flowScore(start, best, score) };
+}
+
 // One-line DJ tip for the pair
 export function transitionTip(from, to) {
   const tips = [];
@@ -255,7 +419,7 @@ export function transitionTip(from, to) {
 }
 
 // ---------- browser wrapper (decode the preview, cache results) ----------
-const CACHE_KEY = 'mixlab-analysis-v1';
+const CACHE_KEY = 'mixlab-analysis-v2';
 let memo = null;
 function store() {
   if (memo) return memo;
@@ -275,33 +439,123 @@ function save() {
   }
 }
 
-let queue = Promise.resolve();
-export function analyzePreview(previewUrl) {
+// The heavy math runs in a background worker so the page stays smooth.
+let worker = null;
+let workerFailed = false;
+let nextId = 0;
+const waiting = new Map();
+function analyzeInWorker(samples, sampleRate) {
+  if (!worker && !workerFailed) {
+    try {
+      worker = new Worker(new URL('./analysisWorker.js', import.meta.url), { type: 'module' });
+      worker.onmessage = (e) => {
+        const w = waiting.get(e.data.id);
+        waiting.delete(e.data.id);
+        if (!w) return;
+        if (e.data.error) w.reject(new Error(e.data.error));
+        else w.resolve(e.data.result);
+      };
+      worker.onerror = () => {
+        // older browsers can't run this worker: finish the waiting songs here instead
+        workerFailed = true;
+        waiting.forEach((w) => {
+          try {
+            w.resolve(analyzeSamples(w.samples, w.sampleRate));
+          } catch (e) {
+            w.reject(e);
+          }
+        });
+        waiting.clear();
+      };
+    } catch {
+      workerFailed = true;
+    }
+  }
+  if (workerFailed || !worker) return Promise.resolve(analyzeSamples(samples, sampleRate));
+  return new Promise((resolve, reject) => {
+    const id = ++nextId;
+    waiting.set(id, { resolve, reject, samples, sampleRate });
+    worker.postMessage({ id, samples, sampleRate }); // copied, so we can fall back if the worker dies
+  });
+}
+
+// Middle 15 seconds is plenty for tempo, key and sound, and twice as fast
+export function middleSlice(samples, sampleRate, seconds = 15) {
+  const want = Math.floor(seconds * sampleRate);
+  if (samples.length <= want) return samples;
+  const start = Math.floor((samples.length - want) / 2);
+  return samples.slice(start, start + want);
+}
+
+// Decode audio in every browser (older Safari only supports the callback style)
+function decode(buf) {
+  const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  let ctx;
+  try {
+    ctx = new Ctx(1, 1, 22050);
+  } catch {
+    ctx = new Ctx(1, 1, 44100); // some Safari versions reject low sample rates
+  }
+  return new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(buf, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve, reject);
+  });
+}
+
+async function analyzeOne(url) {
+  const r = await fetch(`/api/audio?u=${encodeURIComponent(url)}`);
+  if (!r.ok) throw new Error(`audio ${r.status}`);
+  const buf = await r.arrayBuffer();
+  const audio = await decode(buf);
+  const ch = audio.numberOfChannels;
+  const len = audio.length;
+  const mono = new Float32Array(len);
+  for (let c = 0; c < ch; c++) {
+    const d = audio.getChannelData(c);
+    for (let i = 0; i < len; i++) mono[i] += d[i] / ch;
+  }
+  return analyzeInWorker(middleSlice(mono, audio.sampleRate), audio.sampleRate);
+}
+
+// Small priority queue: 2 songs at a time, lowest priority number first
+const PARALLEL = 2;
+const jobs = new Map(); // url -> { priority, promise, resolve, reject, started }
+let running = 0;
+function pump() {
+  while (running < PARALLEL) {
+    let next = null;
+    for (const j of jobs.values()) if (!j.started && (!next || j.priority < next.priority)) next = j;
+    if (!next) return;
+    next.started = true;
+    running += 1;
+    analyzeOne(next.url)
+      .then((res) => {
+        store()[next.url] = res;
+        save();
+        next.resolve(res);
+      })
+      .catch(next.reject)
+      .finally(() => {
+        jobs.delete(next.url);
+        running -= 1;
+        pump();
+      });
+  }
+}
+
+// priority: smaller = sooner (e.g. the songs you can see on screen first)
+export function analyzePreview(previewUrl, priority = 100) {
   if (!previewUrl) return Promise.resolve(null);
   const s = store();
   if (s[previewUrl]) return Promise.resolve(s[previewUrl]);
-  // one at a time so the page stays smooth
-  const run = queue.then(async () => {
-    if (s[previewUrl]) return s[previewUrl];
-    const r = await fetch(`/api/audio?u=${encodeURIComponent(previewUrl)}`);
-    if (!r.ok) throw new Error(`audio ${r.status}`);
-    const buf = await r.arrayBuffer();
-    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    const ctx = new Ctx(1, 1, 22050);
-    const audio = await ctx.decodeAudioData(buf);
-    const ch = audio.numberOfChannels;
-    const len = audio.length;
-    const mono = new Float32Array(len);
-    for (let c = 0; c < ch; c++) {
-      const d = audio.getChannelData(c);
-      for (let i = 0; i < len; i++) mono[i] += d[i] / ch;
-    }
-    await new Promise((res) => setTimeout(res, 0));
-    const result = analyzeSamples(mono, audio.sampleRate);
-    s[previewUrl] = result;
-    save();
-    return result;
-  });
-  queue = run.catch(() => null);
-  return run;
+  const existing = jobs.get(previewUrl);
+  if (existing) {
+    if (!existing.started) existing.priority = Math.min(existing.priority, priority);
+    return existing.promise;
+  }
+  const job = { url: previewUrl, priority, started: false };
+  job.promise = new Promise((resolve, reject) => Object.assign(job, { resolve, reject }));
+  jobs.set(previewUrl, job);
+  pump();
+  return job.promise;
 }

@@ -4,24 +4,110 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/*.js": {
+    "api/live.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/artist.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/artist-info.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/now-playing.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/recommend.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/galaxy.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/preview.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/song-search.js": {
+      "maxDuration": 30,
+      "memory": 512,
+      "includeFiles": "src/data/live.json"
+    },
+    "api/audio.js": {
+      "maxDuration": 15,
+      "memory": 512
+    },
+    "api/cities.js": {
       "maxDuration": 30,
       "memory": 1024,
-      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**,node_modules/shazamio-core/**}"
+      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
+    },
+    "api/city.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
+    },
+    "api/song-insights.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "{src/data/live.json,node_modules/all-the-cities/**}"
+    },
+    "api/shazam.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "{src/data/live.json,node_modules/shazamio-core/**}"
     }
   },
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "microphone=(self), camera=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "microphone=(self), camera=(), geolocation=()"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
       ]
     }
   ]
