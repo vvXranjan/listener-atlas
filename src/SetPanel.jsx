@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { bestOrder, flowScore } from './audioAnalysis.js';
-import { startAutoDj, stopAutoDj, mixNow, mixToIndex, useAutoDj } from './autoDj.js';
+import { startAutoDj, stopAutoDj, mixNow, mixToSong, resumeSet, useAutoDj } from './autoDj.js';
 import { stopMix } from './mixPlayer.js';
 import { stopPreview } from './player.js';
 import { mixOnSpotify, playListOnSpotify } from './spotifyPlayer.js';
@@ -71,14 +71,11 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
     );
 
   // which Auto-DJ step a set song is (matched by title)
-  const djIndex = (s) => dj.titles.findIndex((t) => t === s.title);
+  const isDjCurrent = (s) => dj.on && dj.current && idOf(dj.current) === idOf(s);
 
   // click a song: play it now (with a fade); during Auto-DJ, jump the mix to it
   async function playNow(s, setIdx) {
-    if (dj.on) {
-      const i = djIndex(s);
-      if (i >= 0) return mixToIndex(i);
-    }
+    if (dj.on) return mixToSong(s); // Auto-DJ running: jump the mix to this song
     return mixLive(s);
   }
 
@@ -161,7 +158,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
   function startDj() {
     stopMix();
     stopPreview();
-    startAutoDj(set, { fadeOutMs: djOpts.fade, fadeInMs: Math.round(djOpts.fade * 0.6), skipIntroMs: djOpts.skipIntro ? 15000 : 0 });
+    startAutoDj({ fadeOutMs: djOpts.fade, fadeInMs: Math.round(djOpts.fade * 0.6), skipIntroMs: djOpts.skipIntro ? 15000 : 0 });
   }
 
 
@@ -252,7 +249,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                     <React.Fragment key={idOf(s) + i}>
                       {prev && <Link from={prev} to={cur} />}
                       <li
-                        className={`${s.now ? 'now' : ''} ${!s.now ? 'clickable' : ''} ${djIndex(s) === dj.index && dj.on ? 'playing' : ''}`}
+                        className={`${s.now ? 'now' : ''} ${!s.now ? 'clickable' : ''} ${isDjCurrent(s) ? 'playing' : ''}`}
                         onClick={() => !s.now && playNow(s, setIdx)}
                         title={s.now ? 'Playing now' : dj.on ? 'Mix into this song now' : 'Play this now on your Spotify (with a fade)'}
                       >
@@ -385,21 +382,25 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                   dj.on ? (
                     <div className="ml-dj-live">
                       <div className="ml-dj-head">
-                        <span className="ml-dj-dot" /> AUTO-DJ ON
+                        <span className={`ml-dj-dot ${dj.paused ? 'paused' : ''}`} /> {dj.paused ? 'AUTO-DJ PAUSED' : 'AUTO-DJ ON'}
                         {dj.secondsLeft != null && !dj.mixing && <span className="ml-dj-left">{Math.floor(dj.secondsLeft / 60)}:{String(dj.secondsLeft % 60).padStart(2, '0')} left</span>}
                       </div>
                       <div className="ml-dj-status">{dj.status}</div>
                       <div className="ml-dj-steps">
-                        {dj.titles.map((t, i) => (
-                          <span key={t + i} className={i === dj.index ? 'on' : i < dj.index ? 'done' : ''}>
-                            {t}
-                          </span>
-                        ))}
+                        {dj.current && <span className="on">▶ {dj.current.title}</span>}
+                        {dj.next ? <span>next: {dj.next.title}</span> : <span className="done">no next song: add one</span>}
+                        {dj.skipped > 0 && <span title="Songs from your Spotify queue that Auto-DJ skipped to stay on your set">skipped {dj.skipped} from queue</span>}
                       </div>
                       <div className="un-actions">
-                        <button className="btn-green sm" disabled={dj.mixing || dj.index + 1 >= dj.titles.length} onClick={mixNow}>
-                          ⇄ Mix to next now
-                        </button>
+                        {dj.paused ? (
+                          <button className="btn-green sm" disabled={dj.mixing || !set.length} onClick={resumeSet}>
+                            ▶ Resume set
+                          </button>
+                        ) : (
+                          <button className="btn-green sm" disabled={dj.mixing || !dj.next} onClick={mixNow}>
+                            ⇄ Mix to next now
+                          </button>
+                        )}
                         <button className="btn-ghost sm" onClick={() => stopAutoDj('Auto-DJ stopped.')}>
                           ■ Stop
                         </button>

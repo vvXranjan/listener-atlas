@@ -4,6 +4,7 @@ import { getSet, saveSet, addToSet, addPlayed, getPlayed, getPrefs, onPrefsChang
 import { findTrackUri, getQueue, queueUri, canQueue, isLoggedIn } from './spotify.js';
 import { autoDjState } from './autoDj.js';
 import { everyWhileVisible } from './visibility.js';
+import { after } from './ticker.js';
 
 // Keeps "Your set" in step with what's actually playing on your Spotify:
 //  - songs drop off once they play (they go to "Played")
@@ -56,7 +57,6 @@ export async function bestNextFor(anchor, count = 1) {
 let started = false;
 let lastTrackId = null;
 let filling = false;
-const queued = new Set(); // set songs we've already put in Spotify's queue
 
 // The song now playing is in the set? Then it (and anything before it) has played.
 export function dropPlayed(track) {
@@ -86,23 +86,37 @@ async function fill() {
   }
 }
 
+// "Keep Spotify's queue in sync", just in time: the next set song goes into Spotify's
+// queue only in the last 25 s of the current song. Spotify has no way to take a song
+// back out of its queue, so adding it late means your set changes before then still count.
+export const QUEUE_LEAD_MS = 25000;
+const queuedFor = new Set(); // `${playing track}>${next song}` already queued
+
+export function msLeft(n = getNow(), now = Date.now()) {
+  const t = n.track;
+  if (!t?.durationMs) return Infinity;
+  return t.durationMs - (n.progressMs + (n.playing ? now - n.fetchedAt : 0));
+}
+
 async function syncQueue() {
   if (!getPrefs().syncQueue || !isLoggedIn() || !canQueue() || autoDjState().on) return;
-  const next = getSet()[0];
+  const n = getNow();
+  if (!n.track?.id || !n.playing || msLeft(n) > QUEUE_LEAD_MS) return;
+  const set = getSet();
+  const playing = nowSong(n.track);
+  const at = set.findIndex((s) => songId(s) === songId(playing));
+  const next = at >= 0 ? set[at + 1] : set[0];
   if (!next) return;
-  const id = songId(next);
-  if (queued.has(id)) return;
+  const key = `${n.track.id}>${songId(next)}`;
+  if (queuedFor.has(key)) return;
+  queuedFor.add(key);
   try {
     const q = await getQueue().catch(() => null);
-    if (q?.queue?.slice(0, 5).some((t) => songId(t) === id)) {
-      queued.add(id);
-      return;
-    }
+    if (q?.queue?.[0] && songId(q.queue[0]) === songId(next)) return; // already next in Spotify
     const uri = next.uri || (await findTrackUri(next.title, firstArtist(next.artist))).uri;
     await queueUri(uri);
-    queued.add(id);
   } catch {
-    /* nothing playing yet: try again on the next song change */
+    queuedFor.delete(key); // try again on the next check
   }
 }
 
@@ -127,6 +141,13 @@ export function startSetSync() {
   });
   onSetChange(soon);
   onPrefsChange(soon);
+  // check every 4 s (on time even in a background tab) whether it's time to queue the next song
+  const loop = () =>
+    after(4000, async () => {
+      await syncQueue().catch(() => {});
+      loop();
+    });
+  loop();
 }
 
 // ---------- Spotify's real queue, for the "On Spotify next" strip ----------

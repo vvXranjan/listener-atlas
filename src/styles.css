@@ -923,3 +923,4 @@ body.perf-smooth .gx-wrap { background: rgba(2, 8, 5, 0.97) !important; }
 body.perf-smooth .live-dot, body.perf-smooth .cp-dot, body.perf-smooth .np-here.on, body.perf-smooth .ml-dj-dot,
 body.perf-smooth .gx-pulse, body.perf-smooth .mp-row > img.spin, body.perf-smooth .np-row img.spin { animation: none !important; }
 body.perf-smooth .gx-n.song .gx-ring, body.perf-smooth .gx-score .fg { filter: none !important; }
+.ml-dj-dot.paused { background: #ffd27a; box-shadow: 0 0 10px #ffd27a; animation: none; }

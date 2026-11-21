@@ -3,13 +3,13 @@ import {
   accessToken, canQueue, canStream, isLoggedIn, pausePlayback, playback, resumePlayback, transferTo,
   findTrackUri, playUris, setDeviceVolume, listDevices, seekTo as seekToApi,
 } from './spotify.js';
+import { sleep } from './ticker.js'; // keeps fades on time in background tabs
 
 // 1) "Play here": this page becomes a Spotify device (Web Playback SDK, Premium),
 //    so your own Spotify plays inside Listener Atlas.
 // 2) Auto-pause: when the app plays a preview, transition or effect, your Spotify
 //    pauses, then picks up again when the app goes quiet.
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let player = null;
 let state = { ready: false, deviceId: null, active: false, paused: true, track: null, error: '', loading: false };
 const subs = new Set();
@@ -166,6 +166,7 @@ export async function currentPlayback() {
         uri: t.uri,
         linked: t.linked_from?.uri || null,
         name: t.name,
+        artist: (t.artists || []).map((a) => a.name).join(', '),
         positionMs: s.position,
         durationMs: s.duration,
         isPlaying: !s.paused,
@@ -182,6 +183,7 @@ export async function currentPlayback() {
     uri: pb.item.uri,
     linked: pb.item.linked_from?.uri || null,
     name: pb.item.name,
+    artist: (pb.item.artists || []).map((a) => a.name).join(', '),
     positionMs: pb.progress_ms,
     durationMs: pb.item.duration_ms,
     isPlaying: pb.is_playing,

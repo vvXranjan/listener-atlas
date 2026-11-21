@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNow, setNow } from './nowStore.js';
 import { pausePlayback, resumePlayback, nextTrack, previousTrack, canQueue, isLoggedIn } from './spotify.js';
 import { useSpotifyPlayer, togglePlayHere, ensureDevice, seekHere } from './spotifyPlayer.js';
-import { useAutoDj, mixNow, stopAutoDj } from './autoDj.js';
+import { useAutoDj, mixNow, stopAutoDj, resumeSet } from './autoDj.js';
 
 const mmss = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -118,9 +118,15 @@ export default function MiniPlayer() {
         <div className="mp-dj">
           <span className="ml-dj-dot" />
           <span className="mp-dj-text">{dj.mixing ? 'Mixing…' : dj.status}</span>
-          <button className="gx-fxbtn on" disabled={dj.mixing || dj.index + 1 >= dj.titles.length} onClick={mixNow}>
-            ⇄ Mix now
-          </button>
+          {dj.paused ? (
+            <button className="gx-fxbtn on" disabled={dj.mixing} onClick={resumeSet}>
+              ▶ Resume set
+            </button>
+          ) : (
+            <button className="gx-fxbtn on" disabled={dj.mixing || !dj.next} onClick={mixNow}>
+              ⇄ Mix now
+            </button>
+          )}
           <button className="gx-fxbtn" onClick={() => stopAutoDj('Auto-DJ stopped.')}>
             ■
           </button>

@@ -34,10 +34,9 @@ describe('Your set stays in sync with Spotify', () => {
     expect(dropPlayed(track('z', 'Not in set', 'Nobody'))).toBe(false);
   });
 
-  it('fills up to 3 songs and keeps Spotify\'s queue one step ahead', async () => {
+  it('fills up to 3 songs with the best matches', async () => {
     vi.useFakeTimers();
     setPref('autoFill', true);
-    setPref('syncQueue', true);
     saveSet([{ title: 'Song 1', artist: 'Me' }]);
     startSetSync();
     setNow({ track: track('now', 'Current', 'Someone') });
@@ -48,6 +47,22 @@ describe('Your set stays in sync with Spotify', () => {
     expect(titles).toHaveLength(3);
     expect(titles[0]).toBe('Song 1');
     expect(getSet()[1].auto).toBe(true);
-    expect(queued).toEqual(['spotify:track:Song 1']); // only the next song, once
+  });
+
+  it('queues the next set song only in the last 25 s, once, and follows set changes until then', async () => {
+    vi.useFakeTimers();
+    setPref('autoFill', false);
+    setPref('syncQueue', true);
+    saveSet([{ title: 'Song 1', artist: 'Me' }, { title: 'Song 2', artist: 'Me' }]);
+    startSetSync();
+    const t = { ...track('cur', 'Current', 'Someone'), durationMs: 200000 };
+    setNow({ track: t, playing: true, progressMs: 100000, fetchedAt: Date.now() });
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(queued).toEqual([]); // too early: you can still change your mind
+    saveSet([{ title: 'Song 2', artist: 'Me' }, { title: 'Song 1', artist: 'Me' }]); // you reorder
+    setNow({ progressMs: 180000, fetchedAt: Date.now() }); // 20 s left
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(queued).toEqual(['spotify:track:Song 2']); // the song that's next NOW, only once
+    vi.useRealTimers();
   });
 });

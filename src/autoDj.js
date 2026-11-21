@@ -1,30 +1,42 @@
 import { useEffect, useState } from 'react';
 import { currentPlayback, fadeVolume, ensureDevice } from './spotifyPlayer.js';
 import { findTrackUri, playUris } from './spotify.js';
+import { getSet, saveSet, songId } from './setStore.js';
+import { after } from './ticker.js';
 
-// Auto-DJ: plays your set on your own Spotify and mixes each song into the next.
-// Near the end of a song it fades it out, starts the next one, and fades that in.
-// Spotify plays one song at a time, so this is a smooth fade, not two songs overlapping.
+// Auto-DJ: plays your set on your own Spotify and fades each song into the next.
+//
+// It always follows your LIVE set: reorder, add or remove songs while it runs and the
+// next mix follows the change. Its clock runs in a background worker, so it stays on
+// time when this tab is hidden.
+//
+// Spotify always plays its own queue before anything else. If a stray queued song starts
+// right as your song ends, Auto-DJ skips it and plays your next set song. If YOU pick a
+// different song in the middle of one, Auto-DJ pauses instead of fighting you.
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const POLL_MS = 1500;
+const TICK_MS = 1000;
+const LEAK_WINDOW_MS = 15000; // a different song starting this close to the end = Spotify's queue, not you
 
-let st = { on: false, status: '', error: '', index: -1, titles: [], secondsLeft: null, mixing: false };
+const firstArtist = (a = '') => a.split(/,|&| with | feat\.? /i)[0].trim();
+
+let st = {
+  on: false,
+  paused: false,
+  mixing: false,
+  status: '',
+  error: '',
+  current: null, // { title, artist }
+  next: null, // { title, artist }
+  secondsLeft: null,
+  skipped: 0, // stray queue songs skipped
+};
 const subs = new Set();
 const emit = (patch) => {
   st = { ...st, ...patch };
   subs.forEach((fn) => fn(st));
 };
 
-let items = [];
-let opts = { fadeOutMs: 7000, fadeInMs: 4000, skipIntroMs: 0 };
-let expected = null; // uri we expect to be playing
-let timer = null;
-let baseVolume = null;
-let run = 0; // bumps on stop so old loops quit
-
 export const autoDjState = () => st;
-
 export function useAutoDj() {
   const [s, set] = useState(st);
   useEffect(() => {
@@ -34,124 +46,190 @@ export function useAutoDj() {
   return s;
 }
 
-const same = (pb, uri) => pb && uri && (pb.uri === uri || pb.linked === uri);
+let opts = { fadeOutMs: 7000, fadeInMs: 4000, skipIntroMs: 0 };
+let expected = null; // the track we put on: { uri, id }
+let lastSeen = null; // last poll: { uri, leftMs, at }
+let baseVolume = null;
+let run = 0; // bumps on stop, so old loops quit
+let cancelTick = null;
+const uriCache = new Map(); // songId -> Spotify uri
 
-export async function startAutoDj(songs, options = {}) {
-  stopAutoDj('');
+const isPlayingSong = (pb, song) =>
+  !!pb && !!song && ((song.uri && (pb.uri === song.uri || pb.linked === song.uri)) || songId({ title: pb.name, artist: pb.artist }) === songId(song));
+
+// ---------- reading the live set ----------
+// The song after the one playing now (or the first song if what's playing isn't in the set)
+export function nextInSet(pb, set = getSet()) {
+  const i = set.findIndex((s) => isPlayingSong(pb, s));
+  return i >= 0 ? set[i + 1] || null : set.find((s) => !isPlayingSong(pb, s)) || null;
+}
+function upcomingFrom(song, set = getSet()) {
+  const i = set.findIndex((s) => songId(s) === songId(song));
+  return i >= 0 ? set.slice(i) : [song];
+}
+
+async function uriFor(song) {
+  if (song.uri) return song.uri;
+  const id = songId(song);
+  if (uriCache.has(id)) return uriCache.get(id);
+  const { uri } = await findTrackUri(song.title, firstArtist(song.artist));
+  uriCache.set(id, uri);
+  // remember it in the set, so next time it's instant and matching is exact
+  const set = getSet();
+  if (set.some((s) => songId(s) === id && !s.uri)) saveSet(set.map((s) => (songId(s) === id ? { ...s, uri } : s)));
+  return uri;
+}
+
+// ---------- the loop ----------
+export async function startAutoDj(options = {}) {
+  await stopAutoDj('');
   const my = ++run;
   opts = { ...opts, ...options };
-  emit({ on: true, error: '', status: 'Finding your songs on Spotify…', index: -1, titles: songs.map((s) => s.title), mixing: false });
-  items = [];
-  for (const [i, s] of songs.entries()) {
-    emit({ status: `Finding songs on Spotify… ${i + 1}/${songs.length}` });
-    try {
-      items.push({ ...s, uri: s.uri || (await findTrackUri(s.title, s.artist)).uri });
-    } catch {
-      /* skip songs Spotify doesn't have */
-    }
-    if (my !== run) return;
-  }
-  if (!items.length) return stopAutoDj('None of these songs were found on Spotify.', true);
-  emit({ titles: items.map((s) => s.title) });
+  emit({ on: true, paused: false, error: '', status: 'Starting…', skipped: 0 });
+  const set = getSet();
+  if (!set.length) return stopAutoDj('Add songs to your set first.', true);
 
-  const pb = await currentPlayback();
+  const pb = await currentPlayback().catch(() => null);
   if (my !== run) return;
-  if (pb?.isPlaying) {
-    // let the current song play, then mix into song 1 near its end
-    expected = pb.uri;
+  if (pb?.isPlaying && !set.some((s) => isPlayingSong(pb, s))) {
+    // let the current song play, then mix into your set near its end
+    expected = { uri: pb.uri };
     baseVolume = pb.volume;
-    emit({ index: -1, status: `Mixing into "${items[0].title}" near the end of "${pb.name}"` });
+    emit({ current: { title: pb.name, artist: pb.artist }, next: set[0], status: `Mixing into "${set[0].title}" near the end of "${pb.name}"` });
+  } else if (pb?.isPlaying) {
+    expected = { uri: pb.uri };
+    baseVolume = pb.volume;
   } else {
-    await mixTo(0, { fadeOut: false });
+    await mixTo(set[0], { fadeOut: false });
   }
-  loop(my);
+  tick(my);
 }
 
-function loop(my) {
-  clearTimeout(timer);
-  timer = setTimeout(async () => {
+function tick(my) {
+  cancelTick?.();
+  cancelTick = after(TICK_MS, async () => {
     if (my !== run) return;
-    if (!st.mixing) {
-      const pb = await currentPlayback().catch(() => null);
-      if (my !== run) return;
-      if (!pb) {
-        emit({ status: 'Waiting for Spotify…' });
-      } else {
-        const next = st.index + 1;
-        if (!same(pb, expected)) {
-          if (items[next] && same(pb, items[next].uri)) {
-            // Spotify moved on by itself (we were late): carry on from there
-            expected = items[next].uri;
-            emit({ index: next });
-          } else {
-            return stopAutoDj('You changed the song, so Auto-DJ stopped.');
-          }
-        }
-        const left = pb.durationMs - pb.positionMs;
-        emit({ secondsLeft: Math.max(0, Math.round(left / 1000)) });
-        if (st.index + 1 >= items.length) {
-          emit({ status: `Last song: "${items[st.index]?.title || pb.name}"` });
-          if (left < 2000) return stopAutoDj('Set finished. 🎧');
-        } else if (pb.isPlaying && left <= opts.fadeOutMs + POLL_MS) {
-          await mixTo(st.index + 1, { pb, fadeOutMs: Math.max(1500, Math.min(opts.fadeOutMs, left - 500)) });
-        } else {
-          emit({ status: `Next: "${items[st.index + 1].title}"` });
-        }
-      }
+    try {
+      if (!st.mixing) await check(my);
+    } finally {
+      if (my === run) tick(my);
     }
-    loop(my);
-  }, POLL_MS);
+  });
 }
 
-async function mixTo(i, { pb = null, fadeOut = true, fadeOutMs = opts.fadeOutMs } = {}) {
+async function check(my) {
+  const pb = await currentPlayback().catch(() => null);
+  if (my !== run) return;
+  if (!pb) return emit({ status: 'Waiting for Spotify…' });
+  const now = Date.now();
+  const leftMs = pb.durationMs - pb.positionMs;
+  const next = nextInSet(pb);
+
+  if (expected && pb.uri !== expected.uri && pb.linked !== expected.uri) {
+    const inSet = getSet().some((s) => isPlayingSong(pb, s));
+    const nearEnd = lastSeen && lastSeen.uri === expected.uri && lastSeen.leftMs - (now - lastSeen.at) < LEAK_WINDOW_MS;
+    if (inSet) {
+      // a set song is playing (you clicked it, or Spotify moved on in order): follow it
+      expected = { uri: pb.uri };
+      if (st.paused) emit({ paused: false });
+    } else if (nearEnd && !st.paused) {
+      // our song ended and Spotify jumped to something from its own queue: get back on the set
+      const target = nextInSet({ uri: expected.uri, name: st.current?.title, artist: st.current?.artist }) || getSet()[0];
+      if (target) {
+        emit({ skipped: st.skipped + 1, status: `Skipped "${pb.name}" (from your Spotify queue) to stay on your set` });
+        lastSeen = null;
+        return mixTo(target, { pb, fadeOutMs: 1200 });
+      }
+    } else if (!st.paused) {
+      // you picked something else mid-song: step aside
+      emit({ paused: true, status: `Paused: you chose "${pb.name}". Press Resume to go back to your set.` });
+    }
+  }
+
+  lastSeen = { uri: pb.uri, leftMs, at: now };
+  emit({ current: { title: pb.name, artist: pb.artist }, next, secondsLeft: Math.max(0, Math.round(leftMs / 1000)) });
+  if (st.paused) return;
+  if (!next) {
+    emit({ status: `Last song: "${pb.name}". Add more songs to keep going.` });
+    if (leftMs < 2500 && !pb.isPlaying) return stopAutoDj('Set finished. 🎧');
+    return;
+  }
+  if (pb.isPlaying && leftMs <= opts.fadeOutMs + TICK_MS + 500) {
+    return mixTo(next, { pb, fadeOutMs: Math.max(1500, Math.min(opts.fadeOutMs, leftMs - 400)) });
+  }
+  emit({ status: `Next: "${next.title}" in ${Math.max(0, Math.round((leftMs - opts.fadeOutMs) / 1000))}s` });
+}
+
+async function mixTo(song, { pb = null, fadeOut = true, fadeOutMs = opts.fadeOutMs } = {}) {
   const my = run;
-  emit({ mixing: true, status: `Mixing into "${items[i].title}"…` });
+  emit({ mixing: true, paused: false, status: `Mixing into "${song.title}"…` });
   try {
-    pb = pb || (await currentPlayback());
+    pb = pb || (await currentPlayback().catch(() => null));
     const vol = baseVolume ?? pb?.volume ?? 80;
     baseVolume = vol;
     const low = Math.round(vol * 0.12);
-    const canFade = pb && pb.supportsVolume;
+    const canFade = !!pb?.supportsVolume;
+    // look up the songs first, so the switch itself is instant
+    const list = upcomingFrom(song);
+    const uris = [];
+    for (const s of list.slice(0, 50)) {
+      try {
+        uris.push(await uriFor(s));
+      } catch {
+        /* Spotify doesn't have this one: skip it */
+      }
+      if (my !== run) return;
+    }
+    if (!uris.length) throw new Error(`"${song.title}" isn't on Spotify`);
     if (fadeOut && canFade && pb.isPlaying) await fadeVolume(vol, low, fadeOutMs, pb.deviceId, pb.inPage);
     if (my !== run) return;
-    if (canFade && !fadeOut) await fadeVolume(vol, low, 200, pb.deviceId, pb.inPage);
-    // play the rest of the set as a list: if we're ever late, Spotify still moves on by itself
+    if (canFade && !fadeOut) await fadeVolume(pb.volume ?? vol, low, 200, pb.deviceId, pb.inPage);
+    // play the rest of your set as a list: if we're ever late, Spotify carries on in your order
     const deviceId = pb?.deviceId || (await ensureDevice());
-    await playUris(items.slice(i).map((x) => x.uri), { deviceId, positionMs: opts.skipIntroMs });
-    expected = items[i].uri;
-    emit({ index: i });
-    await sleep(400);
+    await playUris(uris, { deviceId, positionMs: opts.skipIntroMs });
+    expected = { uri: uris[0] };
+    lastSeen = null;
+    emit({ current: { title: song.title, artist: song.artist } });
+    await new Promise((r) => after(400, r));
     const now = await currentPlayback().catch(() => null);
-    if (canFade && my === run) await fadeVolume(low, vol, opts.fadeInMs, now?.deviceId || pb.deviceId, now?.inPage ?? pb.inPage);
-    emit({ status: items[i + 1] ? `Next: "${items[i + 1].title}"` : `Last song: "${items[i].title}"` });
+    if (canFade && my === run) await fadeVolume(low, vol, opts.fadeInMs, now?.deviceId || deviceId, now?.inPage ?? pb?.inPage);
   } catch (e) {
-    stopAutoDj(e.message, true);
+    await stopAutoDj(e.message, true);
   } finally {
-    emit({ mixing: false });
+    if (my === run) emit({ mixing: false });
   }
 }
 
 // Mix into the next song right now, from wherever the current song is
 export async function mixNow() {
   if (!st.on || st.mixing) return;
-  const next = st.index + 1;
-  if (!items[next]) return;
-  await mixTo(next, { fadeOutMs: 3500 });
+  const pb = await currentPlayback().catch(() => null);
+  const next = nextInSet(pb) || getSet()[0];
+  if (next) await mixTo(next, { pb, fadeOutMs: 3500 });
 }
 
-// Jump the mix to a specific song in the set, right now
-export async function mixToIndex(i) {
-  if (!st.on || st.mixing || !items[i] || i === st.index) return;
-  await mixTo(i, { fadeOutMs: 3500 });
+// Jump the mix to a song in the set (clicking a song while Auto-DJ runs)
+export async function mixToSong(song) {
+  if (!st.on || st.mixing || !song) return;
+  await mixTo(song, { fadeOutMs: 3500 });
+}
+
+// After you picked your own song: go back to the set
+export async function resumeSet() {
+  if (!st.on) return;
+  emit({ paused: false });
+  await mixNow();
 }
 
 export async function stopAutoDj(message = '', isError = false) {
   run++;
-  clearTimeout(timer);
+  cancelTick?.();
+  cancelTick = null;
   const restore = baseVolume;
   baseVolume = null;
   expected = null;
-  emit({ on: false, mixing: false, status: isError ? '' : message, error: isError ? message : '', secondsLeft: null });
+  lastSeen = null;
+  emit({ on: false, paused: false, mixing: false, status: isError ? '' : message, error: isError ? message : '', secondsLeft: null });
   // put the volume back if we stopped halfway through a fade
   if (restore != null) {
     const pb = await currentPlayback().catch(() => null);

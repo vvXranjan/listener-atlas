@@ -139,9 +139,13 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
 - **Add songs** by search (Spotify search when connected), from Mix Lab picks, or from your library (**♥ Liked · ☰ Playlists · ↺ Recent · ★ Top**).
 - **Stays in sync**: played songs drop off into a **Played** list (↺ to add back), the next 3 show **NEXT 1/2/3**, and it's the same in every open tab.
 - **Auto-fill to 3 up next** tops up the set with the best matches.
-- **Keep Spotify's queue in sync** puts the next set song into your real Spotify queue, so Spotify follows the set even without Auto-DJ.
+- **Keep Spotify's queue in sync** puts the next set song into your real Spotify queue in the **last 25 seconds** of the current song, so Spotify follows the set even without Auto-DJ, and changes you make before then still count (Spotify can't take songs back out of its queue).
 - **Set flow** score and **✨ Best order**: tries every order (up to 8 songs) and suggests the smoothest.
-- **🎧 Auto-DJ my set**: lets the current song play, then near its end fades it out and fades the next one in. Choose **Quick 4s / Smooth 7s / Long 11s** and **Skip intros**. **⇄ Mix to next now** mixes from wherever the song is. Click any set song to jump the mix there. If you change the song yourself, Auto-DJ steps aside.
+- **🎧 Auto-DJ my set**: lets the current song play, then near its end fades it out and fades the next one in. Choose **Quick 4s / Smooth 7s / Long 11s** and **Skip intros**. **⇄ Mix to next now** mixes from wherever the song is. Click any set song to jump the mix there.
+  - **Always follows your live set**: reorder, add or remove songs while it runs and the next mix uses the change.
+  - **Stays on time in a background tab**: its clock runs in a Web Worker, which browsers don't slow down.
+  - **Skips stray queue songs**: Spotify always plays its own queue first. If an old queued song starts right as your song ends, Auto-DJ skips it and plays your next set song (it shows "skipped N from queue").
+  - **Never fights you**: pick a different song mid-way and Auto-DJ pauses; press **▶ Resume set** (or play a set song) to continue.
 - **The floating window**: drag it anywhere, it snaps to edges and corners (◰ ◳ ◱ ◲), resizes from any edge, minimises (– or double-click), and includes a mini player.
 
 > Spotify plays one song at a time per account, so transitions are smooth fades, not overlaps. For true overlap, turn on *Crossfade songs* in the Spotify app (Settings → Playback).
@@ -312,7 +316,7 @@ tests/                    Vitest tests
 ## Tests
 
 ```bash
-npm test        # 71 tests
+npm test        # 74 tests
 npm run check   # tests + production build
 ```
 
@@ -352,6 +356,7 @@ Both work out of the box, and the `/api/*` routes run as serverless functions sh
 | "No Spotify device is on" | Open Spotify on your Mac or phone, or press **⇣ Play here** |
 | "Reconnect Spotify …" | A newer feature needs one more permission: click Reconnect |
 | "Spotify Premium is needed" | Playback control and Play here need Premium |
+| A song I didn't expect played instead of my set | It was in your Spotify queue from before (Spotify plays its queue first). Auto-DJ now skips these automatically; without Auto-DJ, clear your queue in the Spotify app |
 | Feels laggy | Set **⚡ Smooth** in the bottom bar, close other heavy tabs |
 | Galaxy shows few similar artists | Open data is thin for that artist; it fills in when MusicBrainz is less busy |
 | Safari: Play here doesn't start | Safari may block Spotify's web player; the app still controls your Mac or phone Spotify |
