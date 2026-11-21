@@ -227,9 +227,16 @@ Spotify's public numbers are **monthly listeners (last 28 days)**, updated about
 1. Copy `.env.example` to `.env` and paste your Apify token (https://console.apify.com/settings/integrations).
 2. Run:
 
+Refresh once (~$0.21 for 60 artists):
+
 ```bash
-npm run fetch-data              # refresh once (~$0.21 for 60 artists)
-npm run fetch-data -- --watch   # refresh every 24 hours
+npm run fetch-data
+```
+
+Or keep refreshing every 24 hours:
+
+```bash
+npm run fetch-data -- --watch
 ```
 
 With a token in `.env`, the dev server also refreshes by itself every 24 hours (`REFRESH_HOURS` changes that), and the page checks for new numbers every minute, showing ▲▼ changes. Apify's free plan gives $5/month.
@@ -315,9 +322,16 @@ tests/                    Vitest tests
 
 ## Tests
 
+Run the 76 tests:
+
 ```bash
-npm test        # 76 tests
-npm run check   # tests + production build
+npm test
+```
+
+Run the tests plus a production build:
+
+```bash
+npm run check
 ```
 
 The tests cover API routes, recommendations and fallbacks, audio analysis (tempo, key, sound, best order), Auto-DJ, auto-pause, set sync, the floating window, Galaxy layout, polling and adaptive quality. CI runs tests and a build on every push (`.github/workflows/ci.yml`).

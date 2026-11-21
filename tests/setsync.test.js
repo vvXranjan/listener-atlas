@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 const store = {};
 globalThis.localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => (store[k] = v), removeItem: (k) => delete store[k] };
@@ -17,7 +17,8 @@ globalThis.fetch = vi.fn(async () =>
 
 const { getSet, saveSet, getPlayed, setPref } = await import('../src/setStore.js');
 const { setNow } = await import('../src/nowStore.js');
-const { startSetSync, dropPlayed } = await import('../src/setSync.js');
+const { startSetSync, stopSetSync, dropPlayed } = await import('../src/setSync.js');
+afterAll(() => stopSetSync());
 const track = (id, name, artist) => ({ id, name, artists: [{ name: artist }] });
 
 describe('Your set stays in sync with Spotify', () => {

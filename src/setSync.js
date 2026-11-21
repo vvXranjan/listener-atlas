@@ -55,6 +55,7 @@ export async function bestNextFor(anchor, count = 1) {
 
 // ---------- engine ----------
 let started = false;
+let stopLoop = null;
 let lastTrackId = null;
 let filling = false;
 
@@ -142,12 +143,20 @@ export function startSetSync() {
   onSetChange(soon);
   onPrefsChange(soon);
   // check every 4 s (on time even in a background tab) whether it's time to queue the next song
-  const loop = () =>
-    after(4000, async () => {
+  const loop = () => {
+    stopLoop = after(4000, async () => {
       await syncQueue().catch(() => {});
-      loop();
+      if (started) loop();
     });
+  };
   loop();
+}
+
+// Stop the background checks (used by tests; the app keeps it running)
+export function stopSetSync() {
+  started = false;
+  stopLoop?.();
+  stopLoop = null;
 }
 
 // ---------- Spotify's real queue, for the "On Spotify next" strip ----------
