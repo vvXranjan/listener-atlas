@@ -4,6 +4,7 @@ import { getSet, saveSet, addToSet, addPlayed, getPlayed, getPrefs, onPrefsChang
 import { findTrackUri, getQueue, queueUri, canQueue, isLoggedIn } from './spotify.js';
 import { autoDjState } from './autoDj.js';
 import { everyWhileVisible } from './visibility.js';
+import { blendedMatch, usualNext, playedRecently, habitTimes } from './habits.js';
 import { after } from './ticker.js';
 
 // Keeps "Your set" in step with what's actually playing on your Spotify:
@@ -40,17 +41,36 @@ function taken() {
   return new Set([...getSet(), ...getPlayed(), ...(n ? [n] : [])].map(songId));
 }
 
+// Best songs to play after `anchor`: your own habits and community "played together" data,
+// blended by your Mine/Discovery setting. Skips songs already in the set, playing now,
+// or played in the last hour.
 export async function bestNextFor(anchor, count = 1) {
   const skip = taken();
-  const out = [];
-  for (const s of await suggestionsAfter(anchor)) {
-    const id = songId(s);
-    if (skip.has(id)) continue;
-    skip.add(id);
-    out.push(s);
-    if (out.length >= count) break;
+  const byId = new Map();
+  for (const h of usualNext(anchor, 8)) byId.set(songId(h), { ...h, match: 0, source: 'habit' });
+  for (const r of await suggestionsAfter(anchor)) {
+    const id = songId(r);
+    byId.set(id, { ...r, ...(byId.has(id) ? { source: 'habit+data' } : {}) });
   }
-  return out;
+  return [...byId.values()]
+    .filter((s) => !skip.has(songId(s)) && !playedRecently(s))
+    .map((s) => {
+      const n = habitTimes(anchor, s);
+      return { ...s, habit: n ? `You play this after ${anchor.title} (${n}×)` : null, score: blendedMatch(anchor, s, s.match || 0) };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, count);
+}
+
+// Radio: make sure there's a song after `current`; add the best one if not. Returns it.
+export async function ensureNext(current) {
+  const set = getSet();
+  const at = set.findIndex((s) => (s.uri && s.uri === current.uri) || songId(s) === songId(current));
+  if (at >= 0 ? set[at + 1] : set.some((s) => songId(s) !== songId(current))) return null;
+  const [pick] = await bestNextFor(current, 1);
+  if (!pick) return null;
+  addToSet({ ...pick, auto: true });
+  return getSet().find((s) => songId(s) === songId(pick)) || null;
 }
 
 // ---------- engine ----------

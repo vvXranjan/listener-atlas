@@ -39,7 +39,8 @@ Built with React, MapLibre (globe), deck.gl (3D bars) and only free, open data s
 | **Shazam** | Name the song playing around you (10-second listen) |
 | **Your Spotify** | Now playing, controls, seek bar, your library (liked songs, playlists, top, recent) |
 | **Mix Lab** | Best next songs ranked by how smoothly they blend: tempo, key, energy and real listening data |
-| **Your set + Auto-DJ** | Build a set, find its best order, and let Auto-DJ fade each song into the next on your Spotify |
+| **Your set + Auto-DJ** | Build a set, find its best order, and let Auto-DJ fade each song into the next on your Spotify; picks up songs you queue from your phone; radio mode keeps going |
+| **Your habits** | Learns which songs you play after which (synced across devices) and ranks next songs with it |
 | **Artist Galaxy** | An artist in the centre, their songs grouped by mood, similar artists grouped by genre, live sound effects |
 
 ---
@@ -79,7 +80,7 @@ Needs **Spotify Premium** (Spotify's rule for apps that control playback).
 | Read playback state, currently playing | The Now Playing card, sync, Auto-DJ |
 | Control playback | Play / pause / skip / seek, queue songs, fades |
 | Streaming + email/private | **⇣ Play here** (the page becomes a Spotify device) |
-| Library, playlists, top tracks, recently played | The **♥ Library** popup and "best next in my Liked Songs" |
+| Library, playlists, top tracks, recently played | The **♥ Library** popup, "best next in my Liked Songs", and learning your habits |
 
 If you connected before a feature was added, the app shows a **Reconnect** button for the missing permission.
 
@@ -146,9 +147,22 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
   - **Stays on time in a background tab**: its clock runs in a Web Worker, which browsers don't slow down.
   - **Skips stray queue songs**: Spotify always plays its own queue first. If an old queued song starts right as your song ends, Auto-DJ skips it and plays your next set song (it shows "skipped N from queue").
   - **Never fights you**: pick a different song mid-way and Auto-DJ pauses; press **▶ Resume set** (or play a set song) to continue.
+  - **Hears your phone**: queue a song in Spotify from your phone (or any device) while Auto-DJ runs and it **plays next** with a fade, joins the set tagged **📱 you queued**, then the set carries on. Songs that were already in your queue *before* Auto-DJ started count as old and are skipped. (Spotify lists your queued songs before the playlist's own next songs; Auto-DJ uses that to tell them apart.)
+  - **Radio**: when the set runs out, it adds the best next song itself (your habits first, then recommendations, never a song you played in the last hour), tagged **🔁 habit** or **auto**. Turn it off with *Radio: keep going after the set*.
 - **The floating window**: drag it anywhere, it snaps to edges and corners (◰ ◳ ◱ ◲), resizes from any edge, minimises (– or double-click), and includes a mini player.
 
 > Spotify plays one song at a time per account, so transitions are smooth fades, not overlaps. For true overlap, turn on *Crossfade songs* in the Spotify app (Settings → Playback).
+
+### Your habits (what you play after what)
+
+The app learns your patterns from Spotify's **recently played** list (your last 50 songs, from every device), e.g. *Highest in the Room → No Pole, 6×*.
+
+- Song pairs played within 30 minutes of each other count; recent habits count more (a habit from 2 months ago counts half).
+- **Mix Lab** blends your habit into the score with **Your habits 25% · 50% · 75%** (more discovery ↔ mostly your patterns) and tags picks with **🔁 You play this after … (6×)**. Songs you usually play next are added as candidates even if the community data doesn't have them.
+- **Auto-fill** and **radio** use the same blend.
+- **♥ Library → 🔁 Your patterns** shows your top pairs, most-played songs and artists, **↻ Learn now** and **Clear my history**.
+- **Synced across devices** through a free cloud database (below). Every request is checked against your Spotify login, so nobody else can read or change your habits. Without the database it saves in the browser instead.
+- It learns while the app is open (on start, after each song change, every 10 minutes). If you play more than 50 songs between visits, the older ones in that gap are missed.
 
 ### Your Spotify library
 
@@ -254,6 +268,7 @@ Put these in `.env` locally, or in your host's environment settings. **Never com
 | `APIFY_TOKEN` | Optional | Fetch fresh Spotify listener numbers and look up new artists |
 | `VITE_SPOTIFY_CLIENT_ID` | Optional | Your Spotify app's Client ID (or paste it in the app) |
 | `REFRESH_HOURS` | Optional | How often the dev server refreshes numbers (default 24) |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Optional | Cloud database for your habits (added automatically when you connect Upstash Redis in Vercel; `UPSTASH_REDIS_REST_URL` / `_TOKEN` also work) |
 | `ANTHROPIC_API_KEY` | Optional | Lets Claude re-rank Mix Lab picks; works fine without |
 | `ANTHROPIC_MODEL` | Optional | Model for the above (default `claude-haiku-5-5`) |
 | `SONG_SCAN_BUDGET_MS` | Optional | Time limit for the city-chart scan in "Who's listening?" |
@@ -279,6 +294,7 @@ All under `/api/`. Every outside request times out after 9 seconds, so nothing h
 | `song-search` | `q` | Songs with previews (Apple) |
 | `preview` | `title`, `artist` | Best 30-second preview for a song |
 | `audio` | `u` | Proxies an Apple preview file (Apple hosts only) |
+| `habits` | GET / POST `{plays}` / DELETE, with `Authorization: Bearer <Spotify token>` | Your habits, saved under your Spotify account (503 = cloud not set up) |
 
 ---
 
@@ -300,7 +316,9 @@ src/
   analysisWorker.js       runs the analysis off the main thread
   spotify.js              Spotify login (PKCE), API calls, retries
   spotifyPlayer.js        Play here (Web Playback SDK), fades, auto-pause
-  autoDj.js               Auto-DJ engine
+  autoDj.js               Auto-DJ engine (phone-queue detection, radio)
+  habitsCore.js           learns song pairs from your plays (shared with the server)
+  habits.js               syncs your habits (cloud or browser), habit-aware scoring
   setStore.js, setSync.js the set, played history, live sync with Spotify
   nowStore.js             what's playing, shared across the app
   soundFx.js              live effects (Web Audio)
@@ -311,6 +329,7 @@ server/
   handlers.mjs            every /api route (shared by Vite, Vercel, Netlify)
   adapters.mjs            Node and Web request adapters, cache headers
   http.mjs                fetch with a time limit
+  habits.mjs              /api/habits: Spotify-verified identity + Upstash Redis
   recommend.mjs, galaxy.mjs, song.mjs, api.mjs, live.mjs   data sources
 api/[route].js            one Vercel function for every /api route (free plan allows 12)
 netlify/functions/api.mjs one Netlify function for all routes
@@ -322,7 +341,7 @@ tests/                    Vitest tests
 
 ## Tests
 
-Run the 76 tests:
+Run the 84 tests:
 
 ```bash
 npm test
@@ -347,7 +366,8 @@ Both work out of the box, and the `/api/*` routes run as serverless functions sh
    **Netlify**: Add new site → import the repo → Deploy (settings from `netlify.toml`).
 3. Add environment variables on the host if you use them (`APIFY_TOKEN`, `VITE_SPOTIFY_CLIENT_ID`, …).
 4. In your Spotify app settings, add a second Redirect URI: `https://<your-site>/callback`.
-5. For fresh numbers, add `APIFY_TOKEN` as a GitHub Actions secret: `.github/workflows/refresh-data.yml` refreshes every 2 days and commits, which redeploys (~$3/month, inside Apify's free $5).
+5. **Cloud habits (optional, free):** in Vercel open the project → **Storage** → **Create Database** → **Upstash Redis** (free plan) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` by itself. **Redeploy**. To use it locally too, copy those two values into your `.env`.
+6. For fresh numbers, add `APIFY_TOKEN` as a GitHub Actions secret: `.github/workflows/refresh-data.yml` refreshes every 2 days and commits, which redeploys (~$3/month, inside Apify's free $5).
 
 **Production checklist**
 
@@ -372,6 +392,8 @@ Both work out of the box, and the `/api/*` routes run as serverless functions sh
 | "Spotify Premium is needed" | Playback control and Play here need Premium |
 | A song I didn't expect played instead of my set | It was in your Spotify queue from before (Spotify plays its queue first). Auto-DJ now skips these automatically; without Auto-DJ, clear your queue in the Spotify app |
 | Vercel: "No more than 12 Serverless Functions" | Fixed: all routes share one function, `api/[route].js` |
+| "Your patterns" says *saved in this browser* | The cloud database isn't connected: see Deploy step 5 |
+| A song I queued on my phone didn't play next | Auto-DJ must be running; it checks your queue every ~3 s. Songs queued *before* starting Auto-DJ count as old |
 | Feels laggy | Set **⚡ Smooth** in the bottom bar, close other heavy tabs |
 | Galaxy shows few similar artists | Open data is thin for that artist; it fills in when MusicBrainz is less busy |
 | Safari: Play here doesn't start | Safari may block Spotify's web player; the app still controls your Mac or phone Spotify |

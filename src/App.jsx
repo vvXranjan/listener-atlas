@@ -20,6 +20,7 @@ const Library = lazy(() => import('./Library.jsx'));
 const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
 import { useNowItem } from './mixParts.jsx';
 import { startSetSync } from './setSync.js';
+import { startHabits } from './habits.js';
 import { getArtistCities, toStates, SAMPLE_ARTISTS } from './data.js';
 import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
@@ -114,7 +115,10 @@ export default function App() {
   const [nowTrack, setNowTrack] = useState(null); // what's playing on your Spotify
   const { mode: perfMode, quality } = usePerf();
   const nowItem = useNowItem(nowTrack);
-  useEffect(() => startSetSync(), []);
+  useEffect(() => {
+    startSetSync();
+    startHabits(); // learns what you play after what (from Spotify's recently played)
+  }, []);
   const [floatSet, setFloatSetState] = useState(() => {
     try {
       return localStorage.getItem('floatSet') === '1';

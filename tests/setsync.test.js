@@ -9,6 +9,9 @@ vi.mock('../src/spotify.js', () => ({
   getQueue: vi.fn(async () => ({ queue: [] })),
   queueUri: vi.fn(async (u) => queued.push(u)),
   findTrackUri: vi.fn(async (t) => ({ uri: `spotify:track:${t}` })),
+  accessToken: vi.fn(),
+  canLibrary: () => false,
+  recentPlays: vi.fn(async () => []),
 }));
 vi.mock('../src/autoDj.js', () => ({ autoDjState: () => ({ on: false }) }));
 globalThis.fetch = vi.fn(async () =>

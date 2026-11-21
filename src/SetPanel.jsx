@@ -261,7 +261,12 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                           <div className="un-title">
                             {s.now && <span className="ml-now">NOW</span>}
                             {!s.now && setIdx < UP_NEXT && <span className="ml-upnext">NEXT {setIdx + 1}</span>}
-                            {s.auto && <span className="ml-auto" title="Added by auto-fill">auto</span>}
+                            {s.queued && <span className="ml-auto queued" title="You queued this in Spotify (phone, Mac…) while Auto-DJ ran">📱 you queued</span>}
+                            {s.auto && !s.queued && (
+                              <span className="ml-auto" title={s.habit || 'Added automatically: best match after the previous song'}>
+                                {s.habit ? '🔁 habit' : 'auto'}
+                              </span>
+                            )}
                             {s.title}
                           </div>
                           <div className="tr-artist">{s.artist}</div>
@@ -304,7 +309,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                     <div className="un-body">
                       <div className="un-title">{x.title}</div>
                       <div className="tr-artist">
-                        {x.artist} · {x.match}% match
+                        {x.artist} · {x.habit ? `🔁 ${x.habit}` : `${x.match}% match`}
                       </div>
                     </div>
                     <button className="btn-ghost sm" onClick={() => addToSet(x)}>
@@ -323,6 +328,10 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
               <label className="np-follow">
                 <input type="checkbox" checked={prefs.autoFill} onChange={(e) => setPref('autoFill', e.target.checked)} />
                 Auto-fill to {UP_NEXT} up next with the best matches
+              </label>
+              <label className="np-follow" title="When the set runs out, Auto-DJ adds the best next song itself (your habits first)">
+                <input type="checkbox" checked={prefs.radio !== false} onChange={(e) => setPref('radio', e.target.checked)} />
+                Radio: keep going after the set (your habits first, no repeats within an hour)
               </label>
               {queueReady && (
                 <label className="np-follow">
@@ -389,7 +398,8 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                       <div className="ml-dj-steps">
                         {dj.current && <span className="on">▶ {dj.current.title}</span>}
                         {dj.next ? <span>next: {dj.next.title}</span> : <span className="done">no next song: add one</span>}
-                        {dj.skipped > 0 && <span title="Songs from your Spotify queue that Auto-DJ skipped to stay on your set">skipped {dj.skipped} from queue</span>}
+                        {dj.queuedByYou > 0 && <span title="Songs you queued from your phone or another device while Auto-DJ ran">📱 {dj.queuedByYou} queued by you</span>}
+                        {dj.skipped > 0 && <span title="Old songs in your Spotify queue that Auto-DJ skipped to stay on your set">skipped {dj.skipped} old from queue</span>}
                       </div>
                       <div className="un-actions">
                         {dj.paused ? (

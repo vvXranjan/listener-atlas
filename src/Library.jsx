@@ -6,12 +6,15 @@ import {
 import { addToSet, getSet, onSetChange, songId } from './setStore.js';
 import { stopOthers, stopPreview } from './player.js';
 import { ensureDevice } from './spotifyPlayer.js';
+import { useHabits, syncHabits, clearHabits } from './habits.js';
+import { topPairs, topSongs, topArtists } from './habitsCore.js';
 
 const TABS = [
   ['liked', '♥ Liked songs'],
   ['recent', '↺ Recently played'],
   ['top', '★ Your top'],
   ['playlists', '☰ Playlists'],
+  ['patterns', '🔁 Your patterns'],
 ];
 const idOf = songId;
 const firstArtist = (a) => a.split(/,|&| with /)[0].trim();
@@ -23,7 +26,7 @@ export default function Library({ onClose, onMixLab, initialTab }) {
 }
 
 function LibraryInner({ onClose, onMixLab, initialTab }) {
-  const [tab, setTab] = useState(['liked', 'recent', 'top', 'playlists'].includes(initialTab) ? initialTab : 'liked');
+  const [tab, setTab] = useState(['liked', 'recent', 'top', 'playlists', 'patterns'].includes(initialTab) ? initialTab : 'liked');
   const [range, setRange] = useState('short_term');
   const [playlist, setPlaylist] = useState(null);
   const [data, setData] = useState({}); // key -> { items, total, more, loading, error }
@@ -64,7 +67,7 @@ function LibraryInner({ onClose, onMixLab, initialTab }) {
   }
 
   useEffect(() => {
-    if (!canLibrary()) return;
+    if (!canLibrary() || key === 'patterns') return;
     if (!data[key]) load(key);
     setFilter('');
   }, [key]);
@@ -142,7 +145,7 @@ function LibraryInner({ onClose, onMixLab, initialTab }) {
           <div className="ml-kicker">
             <span className="spark">✦</span> YOUR LIBRARY
           </div>
-          <h2>{playlist ? playlist.name : TABS.find(([t]) => t === tab)[1].slice(2)}</h2>
+          <h2>{playlist ? playlist.name : TABS.find(([t]) => t === tab)[1].replace(/^\S+\s/, '')}</h2>
           <div className="lib-tabs">
             {TABS.map(([t, l]) => (
               <button
@@ -181,6 +184,9 @@ function LibraryInner({ onClose, onMixLab, initialTab }) {
           </div>
         </header>
 
+        {tab === 'patterns' ? (
+          <Patterns filter={filter} onMixLab={onMixLab} />
+        ) : (
         <div className="lib-list">
           {cur?.error && <div className="status err">{cur.error}</div>}
           {cur?.loading && !cur?.items?.length && (
@@ -246,7 +252,95 @@ function LibraryInner({ onClose, onMixLab, initialTab }) {
             </button>
           )}
         </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// Your listening habits: song pairs you repeat, your most-played songs and artists
+export function Patterns({ filter, onMixLab }) {
+  const h = useHabits();
+  const [confirm, setConfirm] = useState(false);
+  const f = filter.trim().toLowerCase();
+  const match = (...xs) => !f || xs.join(' ').toLowerCase().includes(f);
+  const pairs = topPairs(h.doc, 40).filter((p) => match(p.a.title, p.a.artist, p.b.title, p.b.artist));
+  const songs = topSongs(h.doc, 15).filter((s) => match(s.title, s.artist));
+  const artists = topArtists(h.doc, 12);
+  const plays = Object.values(h.doc?.songs || {}).reduce((a, s) => a + s.n, 0);
+  const open = (s) => onMixLab({ id: s.uri || s.title, name: s.title, artists: [{ name: s.artist.split(/,|&/)[0].trim() }] });
+  return (
+    <div className="lib-list">
+      <div className="pt-head">
+        <span className="muted">
+          {plays ? `Learned from ${plays} plays` : 'Nothing learned yet: play some music, it learns from your last 50 songs.'}
+          {h.mode === 'cloud' ? ' · ☁ synced across your devices' : h.mode === 'local' ? ' · saved in this browser (cloud not set up)' : ''}
+          {h.lastSync ? ` · updated ${new Date(h.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+        </span>
+        <button className="btn-ghost sm" disabled={h.syncing} onClick={() => syncHabits()}>
+          {h.syncing ? 'Learning…' : '↻ Learn now'}
+        </button>
+        {plays > 0 &&
+          (confirm ? (
+            <>
+              <button className="btn-ghost sm danger" onClick={() => clearHabits().then(() => setConfirm(false))}>
+                Yes, clear everything
+              </button>
+              <button className="btn-ghost sm" onClick={() => setConfirm(false)}>
+                Keep
+              </button>
+            </>
+          ) : (
+            <button className="btn-ghost sm" onClick={() => setConfirm(true)}>
+              Clear my history
+            </button>
+          ))}
+      </div>
+      {h.error && <div className="status err">{h.error}</div>}
+      {artists.length > 0 && (
+        <>
+          <h4>Your artists</h4>
+          <div className="pt-artists">
+            {artists.map((a) => (
+              <span key={a.name}>
+                {a.name} · {a.n}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+      {pairs.length > 0 && <h4>What you play next</h4>}
+      {pairs.map((p) => (
+        <div key={`${p.a.title}>${p.b.title}`} className="pt-row">
+          <div className="un-body">
+            <div className="un-title">
+              {p.a.title} <span className="pt-arrow">→</span> {p.b.title}
+            </div>
+            <div className="tr-artist">
+              {p.a.artist} → {p.b.artist}
+            </div>
+          </div>
+          <span className="pt-n" title="Times you played them back to back">
+            {p.n}×
+          </span>
+          <button className="btn-ghost sm ml-live" onClick={() => open(p.a)} title="Open the first song in Mix Lab">
+            ✦ Mix Lab
+          </button>
+        </div>
+      ))}
+      {songs.length > 0 && <h4>Your most played</h4>}
+      {songs.map((s) => (
+        <div key={s.title + s.artist} className="pt-row">
+          <div className="un-body">
+            <div className="un-title">{s.title}</div>
+            <div className="tr-artist">{s.artist}</div>
+          </div>
+          <span className="pt-n">{s.n}×</span>
+          <button className="btn-ghost sm" disabled={false} onClick={() => addToSet(s)}>
+            + Set
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

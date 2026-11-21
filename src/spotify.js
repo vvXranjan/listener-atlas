@@ -10,17 +10,33 @@ const SCOPES = [
 ].join(' ');
 const KEY = 'spotifyAuth';
 
+// A Spotify Client ID is 32 letters/numbers. Clean up stray quotes/spaces, and ignore
+// anything else (e.g. a placeholder or the Client Secret pasted by mistake), so the app
+// asks for the ID instead of sending you to Spotify's "client_id: Invalid" page.
+export const cleanClientId = (v) =>
+  String(v || '')
+    .trim()
+    .replace(/^[A-Z_]*CLIENT_ID\s*=\s*/i, '') // "VITE_SPOTIFY_CLIENT_ID=..." pasted as the value
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
+export const isValidClientId = (v) => /^[0-9a-zA-Z]{32}$/.test(cleanClientId(v));
+
 export function getClientId() {
+  let saved = '';
   try {
-    return import.meta.env.VITE_SPOTIFY_CLIENT_ID || localStorage.getItem('spotifyClientId') || '';
+    saved = localStorage.getItem('spotifyClientId') || '';
   } catch {
-    return import.meta.env.VITE_SPOTIFY_CLIENT_ID || '';
+    /* storage blocked */
   }
+  for (const v of [import.meta.env?.VITE_SPOTIFY_CLIENT_ID, saved]) {
+    if (isValidClientId(v)) return cleanClientId(v);
+  }
+  return '';
 }
 
 export function saveClientId(id) {
   try {
-    localStorage.setItem('spotifyClientId', id.trim());
+    localStorage.setItem('spotifyClientId', cleanClientId(id));
   } catch {}
 }
 
@@ -259,6 +275,16 @@ export const recentlyPlayed = async () => {
   p.more = false;
   return p;
 };
+// Your last 50 plays with their times (any device), for learning your habits
+export async function recentPlays() {
+  const j = await api('/me/player/recently-played?limit=50');
+  return (j?.items || [])
+    .map((x) => {
+      const t = mapTrack(x.track);
+      return t ? { title: t.title, artist: t.artist, uri: t.uri, cover: t.cover, playedAt: Date.parse(x.played_at) } : null;
+    })
+    .filter((p) => p && Number.isFinite(p.playedAt));
+}
 export const topTracks = async (range = 'short_term') =>
   ({ ...page(await api(`/me/top/tracks?limit=50&time_range=${range}`), mapTrack), more: false });
 export const myPlaylists = async (offset = 0) =>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { transitionScore, transitionTip } from './audioAnalysis.js';
 import { playMix, stopMix, useMix } from './mixPlayer.js';
 import { togglePreview, usePlaying, stopPreview } from './player.js';
@@ -6,6 +6,7 @@ import { mixOnSpotify } from './spotifyPlayer.js';
 import { canQueue, queueSong, isLoggedIn, logout, login, canLibrary, likedSongs } from './spotify.js';
 import { getSet, onSetChange, addToSet as addSong } from './setStore.js';
 import SetPanel from './SetPanel.jsx';
+import { useHabits, setHabitWeight, usualNext, habitTimes, blendedMatch } from './habits.js';
 import { idOf, firstArtist, spotifySearch, getJson, useNowItem, useAnalyses, Chips, Score, MixBar } from './mixParts.jsx';
 
 // Mix Lab: the best next songs for a smooth transition, plus your own set.
@@ -13,6 +14,9 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
   const start = useNowItem(track); // the song playing now, with a preview
   const [set, setSetState] = useState(getSet);
   const [lib, setLib] = useState(null); // songs from your Liked Songs to try as next picks
+  const hab = useHabits(); // your listening habits (cloud-synced)
+  const [habitItems, setHabitItems] = useState([]); // songs you usually play after the current one
+  const previewCache = useRef(new Map());
   const [recs, setRecs] = useState({}); // anchor id -> recommend result
   const { an, analyse, withAudio } = useAnalyses();
   const [more, setMore] = useState(false);
@@ -76,6 +80,28 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
   const anchorId = anchor ? idOf(anchor) : null;
   const rec = anchorId ? recs[anchorId] : null;
 
+  // songs you usually play after this one: add them as candidates (with a preview to measure)
+  useEffect(() => {
+    if (!anchor) return setHabitItems([]);
+    let alive = true;
+    const list = usualNext(anchor, 6);
+    if (!list.length) return setHabitItems([]);
+    Promise.all(
+      list.map(async (h) => {
+        const k = idOf(h);
+        if (!previewCache.current.has(k)) {
+          const qs = new URLSearchParams({ title: h.title, artist: firstArtist(h.artist) });
+          previewCache.current.set(k, getJson(`/api/preview?${qs}`).catch(() => null));
+        }
+        const p = await previewCache.current.get(k);
+        return { ...h, cover: p?.coverHq || null, preview: p?.preview || null, appleUrl: p?.appleUrl || null, match: 0, source: 'habit', why: '' };
+      })
+    ).then((items) => alive && setHabitItems(items));
+    return () => {
+      alive = false;
+    };
+  }, [anchorId, hab.doc?.updatedAt]);
+
   useEffect(() => {
     if (!anchor || recs[anchorId]) return;
     setRecs((r) => ({ ...r, [anchorId]: { loading: true } }));
@@ -90,18 +116,37 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
     analyse(anchor?.preview, 0);
     [...(rec?.pool || [])].sort((a, b) => b.match - a.match).forEach((p, i) => analyse(p.preview, 1 + i));
     (lib?.items || []).forEach((p, i) => analyse(p.preview, 20 + i));
-  }, [anchor?.preview, rec?.pool, lib?.items, analyse]);
+    habitItems.forEach((p, i) => analyse(p.preview, 5 + i)); // your habits: measure early
+  }, [anchor?.preview, rec?.pool, lib?.items, habitItems, analyse]);
 
   const from = withAudio(anchor);
   const inChain = new Set(chain.map(idOf));
-  const ranked = [...(rec?.pool || []), ...(lib?.items || []).filter((x) => !(rec?.pool || []).some((p) => idOf(p) === idOf(x)))]
-    .filter((p) => !inChain.has(idOf(p)))
+  // every candidate: community picks, your liked songs, and songs you usually play next
+  const candidates = [];
+  const seenIds = new Set();
+  for (const p of [...(rec?.pool || []), ...(lib?.items || []), ...habitItems]) {
+    const id = idOf(p);
+    if (seenIds.has(id) || inChain.has(id)) continue;
+    seenIds.add(id);
+    candidates.push(p);
+  }
+  const ranked = candidates
     .map((p) => {
-      const to = withAudio(p);
-      return { ...to, score: transitionScore(from, to), tip: to.analysed && from.analysed ? transitionTip(from, to) : null };
+      // "data" part of the blend = your habit + community, mixed by the 25/50/75 switch
+      const n = anchor ? habitTimes(anchor, p) : 0;
+      const blend = anchor ? Math.round(blendedMatch(anchor, p, p.match || 0, hab.weight) * 100) : p.match;
+      const to = { ...withAudio(p), match: blend };
+      const habitNote = n ? `🔁 You play this after "${anchor.title}" (${n}×).` : null;
+      return {
+        ...to,
+        habitN: n,
+        why: habitNote ? `${habitNote} ${p.why || ''}`.trim() : p.why,
+        score: transitionScore(from, to),
+        tip: to.analysed && from.analysed ? transitionTip(from, to) : null,
+      };
     })
     .sort((a, b) => b.score - a.score || b.match - a.match);
-  const pending = [...(rec?.pool || []), ...(lib?.items || [])].filter((p) => p.preview && (!an[p.preview] || an[p.preview] === 'busy')).length;
+  const pending = candidates.filter((p) => p.preview && (!an[p.preview] || an[p.preview] === 'busy')).length;
   const shown = more ? ranked : ranked.slice(0, 4);
 
   const addToSet = (s) => addSong(s);
@@ -198,6 +243,28 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
                 Best next songs
                 {pending > 0 && rec?.pool && <span className="ml-busy">Listening to {pending} previews…</span>}
               </h3>
+              {isLoggedIn() && (
+                <div className="ml-habits">
+                  <span className="ml-label" title="How much your own listening habits count vs what the community plays together">
+                    Your habits
+                  </span>
+                  <div className="seg gx-seg">
+                    {[0.25, 0.5, 0.75].map((w) => (
+                      <button key={w} className={hab.weight === w ? 'on' : ''} onClick={() => setHabitWeight(w)}>
+                        {Math.round(w * 100)}%
+                      </button>
+                    ))}
+                  </div>
+                  <span className="muted ml-habits-note">
+                    {hab.weight === 0.25 ? 'more discovery' : hab.weight === 0.75 ? 'mostly your patterns' : 'balanced'} ·{' '}
+                    {Object.keys(hab.doc?.songs || {}).length
+                      ? `learned from ${Object.values(hab.doc.songs).reduce((a, s) => a + s.n, 0)} plays${hab.mode === 'cloud' ? ' · ☁ synced' : hab.mode === 'local' ? ' · this browser' : ''}`
+                      : hab.syncing
+                        ? 'learning your habits…'
+                        : 'no habits learned yet'}
+                  </span>
+                </div>
+              )}
               {rec?.loading && (
                 <div className="un-loading">
                   {[0, 1, 2, 3].map((i) => (

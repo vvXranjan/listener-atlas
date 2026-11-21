@@ -23,7 +23,7 @@ const artistCache = new Map();
 
 export const ROUTES = [
   'live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights', 'recommend',
-  'song-search', 'preview', 'audio', 'galaxy',
+  'song-search', 'preview', 'audio', 'galaxy', 'habits',
 ];
 
 // Only Apple's preview servers may be proxied (stops the proxy being used for anything else)
@@ -38,7 +38,7 @@ export const AUDIO_HOSTS = /^https:\/\/(audio-ssl\.itunes\.apple\.com|[a-z0-9-]+
  * @param {Buffer|null} req.body
  * @param {Record<string,string|undefined>} [req.env]
  */
-export async function handle({ route, method = 'GET', query = {}, body = null, env = process.env }) {
+export async function handle({ route, method = 'GET', query = {}, body = null, headers = {}, env = process.env }) {
   const q = (k) => (typeof query[k] === 'string' ? query[k].trim() : '');
   const token = env.APIFY_TOKEN;
   try {
@@ -111,6 +111,11 @@ export async function handle({ route, method = 'GET', query = {}, body = null, e
         if (!title || !artists.length) return json(400, { error: 'title and artists are required' });
         const { recommend } = await import('./recommend.mjs');
         return json(200, await recommend(title, artists, env));
+      }
+
+      case 'habits': {
+        const { habitsRoute } = await import('./habits.mjs');
+        return habitsRoute({ method, headers, body, env });
       }
 
       case 'galaxy': {

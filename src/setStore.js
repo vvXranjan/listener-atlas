@@ -37,6 +37,8 @@ const slim = (s) => ({
   uri: s.uri || null,
   appleUrl: s.appleUrl || null,
   auto: !!s.auto,
+  queued: !!s.queued,
+  habit: s.habit || null,
 });
 
 // ---- the set
@@ -75,7 +77,7 @@ export function onPlayedChange(fn) {
 }
 
 // ---- set options
-export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false };
+export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false, radio: true, habitWeight: 0.5 };
 export const getPrefs = () => ({ ...DEFAULT_PREFS, ...read(PREFS_KEY, {}) });
 export function setPref(k, v) {
   const p = { ...getPrefs(), [k]: v };

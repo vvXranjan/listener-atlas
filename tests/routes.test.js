@@ -55,3 +55,14 @@ describe('One Vercel function for every route', async () => {
     expect(JSON.parse(res2.body)[0].name).toBe('Mumbai');
   });
 });
+
+describe('Spotify Client ID check', async () => {
+  const { isValidClientId, cleanClientId } = await import('../src/spotify.js');
+  it('accepts a real-looking ID and cleans stray quotes and spaces', () => {
+    expect(isValidClientId('1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d')).toBe(true);
+    expect(cleanClientId(' "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d" ')).toBe('1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d');
+    expect(cleanClientId('VITE_SPOTIFY_CLIENT_ID=1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d')).toBe('1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d');
+    expect(isValidClientId('your_spotify_client_id_here')).toBe(false);
+    expect(isValidClientId('')).toBe(false);
+  });
+});

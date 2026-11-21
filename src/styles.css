@@ -924,3 +924,19 @@ body.perf-smooth .live-dot, body.perf-smooth .cp-dot, body.perf-smooth .np-here.
 body.perf-smooth .gx-pulse, body.perf-smooth .mp-row > img.spin, body.perf-smooth .np-row img.spin { animation: none !important; }
 body.perf-smooth .gx-n.song .gx-ring, body.perf-smooth .gx-score .fg { filter: none !important; }
 .ml-dj-dot.paused { background: #ffd27a; box-shadow: 0 0 10px #ffd27a; animation: none; }
+
+/* ================= v20: habits + phone queue ================= */
+.ml-auto.queued { background: rgba(94,231,255,.15); color: #8ff0ff; }
+.ml-habits { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 2px 0 12px; }
+.ml-habits .ml-label { margin: 0; }
+.ml-habits .gx-seg button { padding: 4px 12px; font-size: 11px; }
+.ml-habits-note { font-size: 11px; }
+.pt-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: rgba(0,0,0,.22); }
+.pt-row .un-body { min-width: 0; }
+.pt-arrow { color: var(--neon); font-weight: 700; flex: none; }
+.pt-n { font-family: var(--mono); font-size: 11px; color: var(--mint); flex: none; min-width: 34px; text-align: right; }
+.pt-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 6px; font-size: 12px; }
+.pt-artists { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pt-artists span { font-size: 11px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--edge); color: var(--mint); }
+.lib-list h4 { margin: 10px 2px 4px; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--mint); }
+.btn-ghost.sm.danger { border-color: rgba(255,120,120,.6); color: #ff9c9c; }

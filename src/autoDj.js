@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { currentPlayback, fadeVolume, ensureDevice } from './spotifyPlayer.js';
-import { findTrackUri, playUris } from './spotify.js';
-import { getSet, saveSet, songId } from './setStore.js';
+import { findTrackUri, playUris, getQueue, nextTrack } from './spotify.js';
+import { getSet, saveSet, songId, getPrefs } from './setStore.js';
 import { after } from './ticker.js';
 
 // Auto-DJ: plays your set on your own Spotify and fades each song into the next.
@@ -10,9 +10,13 @@ import { after } from './ticker.js';
 // next mix follows the change. Its clock runs in a background worker, so it stays on
 // time when this tab is hidden.
 //
-// Spotify always plays its own queue before anything else. If a stray queued song starts
-// right as your song ends, Auto-DJ skips it and plays your next set song. If YOU pick a
-// different song in the middle of one, Auto-DJ pauses instead of fighting you.
+// Spotify always plays its own queue before anything else:
+//  - songs that were already in your Spotify queue when Auto-DJ started are "old": if one
+//    starts right as your song ends, Auto-DJ skips it and stays on your set;
+//  - songs you queue WHILE it runs (from your phone, Mac, anywhere) are yours: they join the
+//    set and play next, then the set carries on.
+// If YOU pick a different song in the middle of one, Auto-DJ pauses instead of fighting you.
+// When the set runs out, radio mode keeps going with your habits + recommendations.
 
 const TICK_MS = 1000;
 const LEAK_WINDOW_MS = 15000; // a different song starting this close to the end = Spotify's queue, not you
@@ -29,6 +33,7 @@ let st = {
   next: null, // { title, artist }
   secondsLeft: null,
   skipped: 0, // stray queue songs skipped
+  queuedByYou: 0, // songs you queued from another device while it ran
 };
 const subs = new Set();
 const emit = (patch) => {
@@ -53,6 +58,11 @@ let baseVolume = null;
 let run = 0; // bumps on stop, so old loops quit
 let cancelTick = null;
 const uriCache = new Map(); // songId -> Spotify uri
+let oldQueue = new Set(); // uris in Spotify's queue that aren't yours-from-now (old queue, playlist/album songs)
+let context = new Set(); // uris we gave Spotify as the play list
+const handled = new Set(); // queued songs we've already added to the set
+let ticks = 0;
+let radioFor = null; // the song radio last found a follow-up for
 
 const isPlayingSong = (pb, song) =>
   !!pb && !!song && ((song.uri && (pb.uri === song.uri || pb.linked === song.uri)) || songId({ title: pb.name, artist: pb.artist }) === songId(song));
@@ -85,9 +95,15 @@ export async function startAutoDj(options = {}) {
   await stopAutoDj('');
   const my = ++run;
   opts = { ...opts, ...options };
-  emit({ on: true, paused: false, error: '', status: 'Starting…', skipped: 0 });
+  emit({ on: true, paused: false, error: '', status: 'Starting…', skipped: 0, queuedByYou: 0 });
   const set = getSet();
   if (!set.length) return stopAutoDj('Add songs to your set first.', true);
+  // whatever is in Spotify's queue right now is "old"
+  const q = await getQueue().catch(() => null);
+  oldQueue = new Set((q?.queue || []).map((t) => t.uri));
+  handled.clear();
+  context = new Set();
+  radioFor = null;
 
   const pb = await currentPlayback().catch(() => null);
   if (my !== run) return;
@@ -117,13 +133,58 @@ function tick(my) {
   });
 }
 
+// Songs at the FRONT of Spotify's queue that weren't there before = queued by you just now
+// (Spotify puts your queued songs before the playlist/album's own next songs).
+export function newlyQueued(queue, old, ctx) {
+  const front = [];
+  let i = 0;
+  for (; i < queue.length; i++) {
+    const t = queue[i];
+    if (old.has(t.uri) || ctx.has(t.uri)) break;
+    front.push(t);
+  }
+  return { front, rest: queue.slice(i) };
+}
+
+async function scanQueue(pb) {
+  const q = await getQueue().catch(() => null);
+  if (!q) return;
+  const { front, rest } = newlyQueued(q.queue || [], oldQueue, context);
+  rest.forEach((t) => oldQueue.add(t.uri)); // playlist/album songs further down: not yours
+  const fresh = front.filter((t) => !handled.has(t.uri));
+  if (!fresh.length) return;
+  const set = getSet();
+  const at = set.findIndex((s) => isPlayingSong(pb, s));
+  const before = set.slice(0, at + 1);
+  const after_ = set.slice(at + 1).filter((s) => !fresh.some((t) => songId(t) === songId(s)));
+  const added = fresh.map((t) => ({ title: t.title, artist: t.artist, cover: t.cover || null, uri: t.uri, preview: null, queued: true }));
+  fresh.forEach((t) => handled.add(t.uri));
+  // keep the order you queued them in, right after the song playing now
+  const already = after_.filter((s) => s.queued);
+  const others = after_.filter((s) => !s.queued);
+  saveSet([...before, ...already, ...added, ...others]);
+  emit({
+    queuedByYou: st.queuedByYou + added.length,
+    status: `📱 You queued "${added[0].title}"${added.length > 1 ? ` +${added.length - 1}` : ''}: playing it next`,
+  });
+}
+
 async function check(my) {
   const pb = await currentPlayback().catch(() => null);
   if (my !== run) return;
   if (!pb) return emit({ status: 'Waiting for Spotify…' });
+  if (++ticks % 3 === 0 && !st.paused) await scanQueue(pb); // every ~3 s
+  if (my !== run) return;
   const now = Date.now();
   const leftMs = pb.durationMs - pb.positionMs;
-  const next = nextInSet(pb);
+  let next = nextInSet(pb);
+  // radio: set ran out, so add the best follow-up (your habits first, then recommendations)
+  if (!next && !st.paused && radioOn() && radioFor !== pb.uri) {
+    radioFor = pb.uri;
+    const { ensureNext } = await import('./setSync.js');
+    next = (await ensureNext({ title: pb.name, artist: pb.artist, uri: pb.uri }).catch(() => null)) || null;
+    if (my !== run) return;
+  }
 
   if (expected && pb.uri !== expected.uri && pb.linked !== expected.uri) {
     const inSet = getSet().some((s) => isPlayingSong(pb, s));
@@ -155,7 +216,9 @@ async function check(my) {
     return;
   }
   if (pb.isPlaying && leftMs <= opts.fadeOutMs + TICK_MS + 500) {
-    return mixTo(next, { pb, fadeOutMs: Math.max(1500, Math.min(opts.fadeOutMs, leftMs - 400)) });
+    const fadeOutMs = Math.max(1500, Math.min(opts.fadeOutMs, leftMs - 400));
+    // a song you queued is already first in Spotify's queue: skip into it (no duplicate copy)
+    return next.queued ? skipInto(next, { pb, fadeOutMs }) : mixTo(next, { pb, fadeOutMs });
   }
   emit({ status: `Next: "${next.title}" in ${Math.max(0, Math.round((leftMs - opts.fadeOutMs) / 1000))}s` });
 }
@@ -187,6 +250,7 @@ async function mixTo(song, { pb = null, fadeOut = true, fadeOutMs = opts.fadeOut
     // play the rest of your set as a list: if we're ever late, Spotify carries on in your order
     const deviceId = pb?.deviceId || (await ensureDevice());
     await playUris(uris, { deviceId, positionMs: opts.skipIntroMs });
+    context = new Set(uris); // these are ours, not "queued by you"
     expected = { uri: uris[0] };
     lastSeen = null;
     emit({ current: { title: song.title, artist: song.artist } });
@@ -200,12 +264,43 @@ async function mixTo(song, { pb = null, fadeOut = true, fadeOutMs = opts.fadeOut
   }
 }
 
+// Fade out, let Spotify play the song you queued (it's first in its queue), fade back in
+async function skipInto(song, { pb, fadeOutMs = opts.fadeOutMs } = {}) {
+  const my = run;
+  emit({ mixing: true, status: `Mixing into "${song.title}" (you queued it)…` });
+  try {
+    const vol = baseVolume ?? pb?.volume ?? 80;
+    baseVolume = vol;
+    const low = Math.round(vol * 0.12);
+    const canFade = !!pb?.supportsVolume;
+    if (canFade && pb.isPlaying) await fadeVolume(vol, low, fadeOutMs, pb.deviceId, pb.inPage);
+    if (my !== run) return;
+    await nextTrack();
+    await new Promise((r) => after(700, r));
+    // make sure Spotify really moved to your queued song; if not, start it directly
+    const now = await currentPlayback().catch(() => null);
+    if (now && song.uri && now.uri !== song.uri && now.linked !== song.uri) {
+      await playUris([song.uri, ...upcomingFrom(song).slice(1).map((s) => s.uri).filter(Boolean)], { deviceId: now.deviceId || pb.deviceId });
+    }
+    expected = { uri: song.uri };
+    lastSeen = null;
+    emit({ current: { title: song.title, artist: song.artist } });
+    if (canFade && my === run) await fadeVolume(low, vol, opts.fadeInMs, pb.deviceId, pb.inPage);
+  } catch (e) {
+    await stopAutoDj(e.message, true);
+  } finally {
+    if (my === run) emit({ mixing: false });
+  }
+}
+
+const radioOn = () => getPrefs().radio !== false;
+
 // Mix into the next song right now, from wherever the current song is
 export async function mixNow() {
   if (!st.on || st.mixing) return;
   const pb = await currentPlayback().catch(() => null);
   const next = nextInSet(pb) || getSet()[0];
-  if (next) await mixTo(next, { pb, fadeOutMs: 3500 });
+  if (next) await (next.queued ? skipInto(next, { pb, fadeOutMs: 3500 }) : mixTo(next, { pb, fadeOutMs: 3500 }));
 }
 
 // Jump the mix to a song in the set (clicking a song while Auto-DJ runs)

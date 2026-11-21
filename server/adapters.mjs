@@ -4,6 +4,9 @@ import { handle } from './handlers.mjs';
 
 async function readBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
+  // Vercel may have parsed the body already
+  if (typeof req.body === 'string') return Buffer.from(req.body);
+  if (req.body && typeof req.body === 'object') return Buffer.from(JSON.stringify(req.body));
   const chunks = [];
   let size = 0;
   for await (const c of req) {
@@ -25,6 +28,7 @@ const CACHE = {
   'song-search': 'public, s-maxage=3600',
   preview: 'public, s-maxage=86400',
   galaxy: 'public, s-maxage=21600',
+  habits: 'private, no-store', // personal: never cached
 };
 
 // Node style (req, res): Vite dev server and Vercel functions.
@@ -39,7 +43,7 @@ export function nodeHandler(fixedRoute) {
     const route = fixedRoute || req.query?.route || query.route || routeFromPath(url.pathname);
     if (!fixedRoute) delete query.route; // Vercel adds ?route= for api/[route].js
     const body = req.method === 'POST' ? await readBody(req) : null;
-    const r = await handle({ route, method: req.method, query, body });
+    const r = await handle({ route, method: req.method, query, body, headers: req.headers || {} });
     res.statusCode = r.status;
     if (r.binary) {
       for (const [k, v] of Object.entries(r.headers || {})) res.setHeader(k, v);
@@ -57,7 +61,7 @@ export async function webHandler(request) {
   const route = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '').split('/')[0];
   const query = Object.fromEntries(url.searchParams);
   const body = request.method === 'POST' ? Buffer.from(await request.arrayBuffer()) : null;
-  const r = await handle({ route, method: request.method, query, body });
+  const r = await handle({ route, method: request.method, query, body, headers: Object.fromEntries(request.headers) });
   if (r.binary) return new Response(r.body, { status: r.status, headers: r.headers });
   const headers = { 'Content-Type': 'application/json; charset=utf-8' };
   if (r.status === 200 && CACHE[route]) headers['Cache-Control'] = CACHE[route];

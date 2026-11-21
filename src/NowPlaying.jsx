@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   getClientId,
   saveClientId,
+  isValidClientId,
   login,
   logout,
   isLoggedIn,
@@ -352,7 +353,10 @@ function SetupModalInner({ clientId, setClientId, onSave, onClose }) {
           </li>
         </ol>
         <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Paste your Client ID" />
-        <button className="btn-spotify" disabled={clientId.trim().length < 20} onClick={onSave}>
+        {clientId.trim() && !isValidClientId(clientId) && (
+          <div className="status err">That doesn't look like a Client ID: it should be 32 letters and numbers (not the Client Secret).</div>
+        )}
+        <button className="btn-spotify" disabled={!isValidClientId(clientId)} onClick={onSave}>
           Save &amp; connect
         </button>
         <p className="muted">
