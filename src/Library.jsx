@@ -8,6 +8,7 @@ import { stopOthers, stopPreview } from './player.js';
 import { ensureDevice } from './spotifyPlayer.js';
 import { useHabits, syncHabits, clearHabits } from './habits.js';
 import { topPairs, topSongs, topArtists } from './habitsCore.js';
+import ArtistLink from './ArtistLink.jsx';
 
 const TABS = [
   ['liked', '♥ Liked songs'],
@@ -221,7 +222,7 @@ function LibraryInner({ onClose, onMixLab, initialTab }) {
                     <div className="un-body">
                       <div className="un-title">{t.title}</div>
                       <div className="tr-artist">
-                        {t.artist}
+                        <ArtistLink name={t.artist} />
                         {t.durationMs ? <span className="lib-dur"> · {mmss(t.durationMs)}</span> : null}
                       </div>
                       {msg[t.uri] && <div className={`ml-livestep ${msg[t.uri].startsWith('⚠') ? 'err' : ''}`}>{msg[t.uri]}</div>}
@@ -303,7 +304,7 @@ export function Patterns({ filter, onMixLab }) {
           <div className="pt-artists">
             {artists.map((a) => (
               <span key={a.name}>
-                {a.name} · {a.n}
+                <ArtistLink name={a.name} /> · {a.n}
               </span>
             ))}
           </div>
@@ -317,7 +318,7 @@ export function Patterns({ filter, onMixLab }) {
               {p.a.title} <span className="pt-arrow">→</span> {p.b.title}
             </div>
             <div className="tr-artist">
-              {p.a.artist} → {p.b.artist}
+              <ArtistLink name={p.a.artist} /> → <ArtistLink name={p.b.artist} />
             </div>
           </div>
           <span className="pt-n" title="Times you played them back to back">
@@ -333,7 +334,9 @@ export function Patterns({ filter, onMixLab }) {
         <div key={s.title + s.artist} className="pt-row">
           <div className="un-body">
             <div className="un-title">{s.title}</div>
-            <div className="tr-artist">{s.artist}</div>
+            <div className="tr-artist">
+              <ArtistLink name={s.artist} />
+            </div>
           </div>
           <span className="pt-n">{s.n}×</span>
           <button className="btn-ghost sm" disabled={false} onClick={() => addToSet(s)}>

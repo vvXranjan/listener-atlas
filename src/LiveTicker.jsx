@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { everyWhileVisible } from './visibility.js';
+import ArtistLink from './ArtistLink.jsx';
 
 const POLL_MS = 10000;
 
@@ -58,7 +59,7 @@ export default function LiveTicker({ onArtist }) {
         <div className="ticker-move">
           {[...items, ...items].map((l, i) => (
             <button key={`${l.key}-${i}`} className="ticker-item" onClick={() => onArtist({ name: l.artist })}>
-              <b>{l.track}</b> · {l.artist} <span className="muted">{ago(l.at, now)}</span>
+              <b>{l.track}</b> · <ArtistLink name={l.artist} /> <span className="muted">{ago(l.at, now)}</span>
             </button>
           ))}
         </div>

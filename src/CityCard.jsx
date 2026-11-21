@@ -1,6 +1,7 @@
 import React from 'react';
 import { flag } from './countries.js';
 import { togglePreview, usePlaying } from './player.js';
+import ArtistLink from './ArtistLink.jsx';
 
 const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n));
 const time = (d) => (d ? new Date(d).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '');
@@ -91,9 +92,9 @@ export default function CityCard({ state, moves, spotifyHere, onClose, onArtist 
                       {t.title}
                       {t.explicit && <span className="e">E</span>}
                     </span>
-                    <button className="tr-artist" onClick={() => onArtist({ name: t.artist.split(/,|&/)[0].trim() })}>
-                      {t.artist}
-                    </button>
+                    <span className="tr-artist">
+                      <ArtistLink name={t.artist} />
+                    </span>
                   </span>
                 </li>
               );

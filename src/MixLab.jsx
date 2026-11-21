@@ -8,6 +8,7 @@ import { getSet, onSetChange, addToSet as addSong } from './setStore.js';
 import SetPanel from './SetPanel.jsx';
 import { useHabits, setHabitWeight, usualNext, habitTimes, blendedMatch } from './habits.js';
 import { idOf, firstArtist, spotifySearch, getJson, useNowItem, useAnalyses, Chips, Score, MixBar } from './mixParts.jsx';
+import ArtistLink from './ArtistLink.jsx';
 
 // Mix Lab: the best next songs for a smooth transition, plus your own set.
 export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, floatingSet, onDock }) {
@@ -200,10 +201,32 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
           ×
         </button>
 
-        <header className="ml-head">
+        <header className="ml-head ml-head-top">
           <div className="ml-kicker">
             <span className="spark">✦</span> MIX LAB
           </div>
+        </header>
+
+        {/* Your set + Auto-DJ first, then suggestions */}
+        <div className="d-body ml-top-set">
+          {floatingSet ? (
+            <section className="ml-set">
+              <h3 className="ml-h">
+                Your set <span className="ml-count">{set.length}</span>
+              </h3>
+              <div className="muted">
+                Your set is in its own floating window.{' '}
+                <button className="link-btn" onClick={onDock}>
+                  Put it back here
+                </button>
+              </div>
+            </section>
+          ) : (
+            <SetPanel start={start} onLibrary={onLibrary} onFloat={onFloat} />
+          )}
+        </div>
+
+        <header className="ml-head ml-head-next">
           <h2>What should play next?</h2>
           <div className="muted">
             Songs real listeners play together, ranked by how smoothly they blend: tempo, key and energy.
@@ -230,7 +253,9 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
                 </button>
                 <div className="un-body">
                   <div className="un-title">{from.title}</div>
-                  <div className="tr-artist">{from.artist}</div>
+                  <div className="tr-artist">
+                    <ArtistLink name={from.artist} />
+                  </div>
                   <Chips a={from} noPreview={!from.preview} />
                 </div>
               </div>
@@ -290,9 +315,9 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
                         <div className="ml-top">
                           <div className="ml-titles">
                             <div className="un-title">{p.title}</div>
-                            <button className="tr-artist" onClick={() => onArtist({ name: firstArtist(p.artist) })}>
-                              {p.artist}
-                            </button>
+                            <div className="tr-artist">
+                              <ArtistLink name={p.artist} />
+                            </div>
                           </div>
                           <Score value={p.score} live={p.analysed && from.analysed} />
                         </div>
@@ -365,21 +390,6 @@ export default function MixLab({ track, onArtist, onClose, onLibrary, onFloat, f
             </section>
           )}
 
-          {floatingSet ? (
-            <section className="ml-set">
-              <h3 className="ml-h">
-                Your set <span className="ml-count">{set.length}</span>
-              </h3>
-              <div className="muted">
-                Your set is in its own floating window.{' '}
-                <button className="link-btn" onClick={onDock}>
-                  Put it back here
-                </button>
-              </div>
-            </section>
-          ) : (
-            <SetPanel start={start} onLibrary={onLibrary} onFloat={onFloat} />
-          )}
         </div>
       </aside>
     </div>

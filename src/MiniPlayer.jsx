@@ -3,6 +3,7 @@ import { useNow, setNow } from './nowStore.js';
 import { pausePlayback, resumePlayback, nextTrack, previousTrack, canQueue, isLoggedIn } from './spotify.js';
 import { useSpotifyPlayer, togglePlayHere, ensureDevice, seekHere } from './spotifyPlayer.js';
 import { useAutoDj, mixNow, stopAutoDj, resumeSet } from './autoDj.js';
+import ArtistLink from './ArtistLink.jsx';
 
 const mmss = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -48,7 +49,14 @@ export default function MiniPlayer() {
         {tr.cover ? <img src={tr.cover} alt="" className={now.playing ? 'spin' : ''} /> : <div className="ph" />}
         <div className="mp-text">
           <div className="un-title">{tr.name}</div>
-          <div className="tr-artist">{tr.artists.map((a) => a.name).join(', ')}</div>
+          <div className="tr-artist">
+            {tr.artists.map((a, i) => (
+              <span key={a.name + i}>
+                {i > 0 && ', '}
+                <ArtistLink name={a.name} />
+              </span>
+            ))}
+          </div>
         </div>
         {can && (
           <div className="np-ctl mp-ctl">

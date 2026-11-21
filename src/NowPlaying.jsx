@@ -22,6 +22,7 @@ import {
 import { setNow } from './nowStore.js';
 import { playHere, useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
 import { everyWhileVisible } from './visibility.js';
+import ArtistLink from './ArtistLink.jsx';
 
 const POLL_MS = 5000;
 const mmss = (ms) => {
@@ -171,7 +172,14 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
               <a href={tr.url} target="_blank" rel="noreferrer" className="np-title">
                 {tr.name}
               </a>
-              <div className="np-artists">{tr.artists.map((a) => a.name).join(', ')}</div>
+              <div className="np-artists">
+                {tr.artists.map((a, i) => (
+                  <span key={a.name + i}>
+                    {i > 0 && ', '}
+                    <ArtistLink name={a.name} />
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
           <div

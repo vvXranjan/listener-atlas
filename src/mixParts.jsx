@@ -3,6 +3,7 @@ import { analyzePreview, transitionScore, transitionTip, tempoGap, keyScore } fr
 import { togglePreview, usePlaying } from './player.js';
 import { isLoggedIn, searchSpotify } from './spotify.js';
 import { songId } from './setStore.js';
+import ArtistLink from './ArtistLink.jsx';
 
 // Bits shared by Mix Lab and the "Your set" panel
 
@@ -180,7 +181,9 @@ export function SongSearch({ onAdd, inSet }) {
                 </button>
                 <div className="un-body">
                   <div className="un-title">{s.title}</div>
-                  <div className="tr-artist">{s.artist}</div>
+                  <div className="tr-artist">
+                    <ArtistLink name={s.artist} />
+                  </div>
                 </div>
                 <button className="btn-ghost sm" disabled={added} onClick={() => onAdd(s)}>
                   {added ? '✓ Added' : '+ Add'}

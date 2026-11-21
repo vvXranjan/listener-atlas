@@ -410,6 +410,13 @@ export default function App() {
     return out.sort((x, y) => y.listeners - x.listeners).slice(0, 8);
   }, [city?.data, artists]);
 
+  // click any artist name anywhere → open their Galaxy
+  useEffect(() => {
+    const on = (e) => e.detail && setGalaxy(e.detail);
+    window.addEventListener('open-galaxy', on);
+    return () => window.removeEventListener('open-galaxy', on);
+  }, []);
+
   // open the artist page; artists from charts may not be in our Spotify data
   function openArtist(a) {
     if (!a) return;

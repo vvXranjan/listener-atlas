@@ -616,6 +616,10 @@ h3 { color: #5f9c7b; font-family: var(--mono); font-weight: 500; letter-spacing:
 .ml-mixtrack span { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #1ed760, #7dffb6); }
 .ml-mixtrack i { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,255,255,.18) 0 3px, transparent 3px 6px); }
 .ml-set { margin-top: 26px; padding-top: 18px; border-top: 1px solid rgba(30,215,96,.15); }
+.ml-head-top { padding: 24px 24px 6px; border-bottom: 0; }
+.ml-top-set { padding-top: 6px; padding-bottom: 8px; }
+.ml-top-set > .ml-set { margin-top: 0; padding-top: 0; border-top: 0; }
+.ml-head-next { padding-top: 22px; border-top: 1px solid var(--edge); background: linear-gradient(180deg, rgba(30,215,96,.08), transparent); }
 .ml-count { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 99px; background: rgba(30,215,96,.18); color: var(--mint); }
 .drawer .link-btn.ml-clear { margin-left: auto; color: #9fb3a8; font-weight: 500; }
 .ml-chain { list-style: none; margin: 10px 0 0; padding: 0; }
@@ -940,3 +944,7 @@ body.perf-smooth .gx-n.song .gx-ring, body.perf-smooth .gx-score .fg { filter: n
 .pt-artists span { font-size: 11px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--edge); color: var(--mint); }
 .lib-list h4 { margin: 10px 2px 4px; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--mint); }
 .btn-ghost.sm.danger { border-color: rgba(255,120,120,.6); color: #ff9c9c; }
+
+/* v21: clickable artist names → Artist Galaxy */
+.artist-link { cursor: pointer; border-radius: 3px; text-decoration: underline transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
+.artist-link:hover, .artist-link:focus-visible { color: var(--mint); text-decoration-color: currentColor; outline: none; }

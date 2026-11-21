@@ -3,6 +3,7 @@ import { analyzePreview } from './audioAnalysis.js';
 import { EFFECTS, playFx, stopFx, toggleFx, useFx } from './soundFx.js';
 import { canQueue, isLoggedIn, queueSong } from './spotify.js';
 import { mixOnSpotify } from './spotifyPlayer.js';
+import ArtistLink from './ArtistLink.jsx';
 
 // Artist Galaxy: the artist in the center, their songs on the inner orbit
 // (grouped by mood), similar artists on the outer orbit (grouped by genre).
@@ -537,7 +538,7 @@ function SongCard({ s, fx, queued, onQueue, onMixLab }) {
           <div className="ml-label">{[s.album, s.year].filter(Boolean).join(' · ') || 'Song'}</div>
           <h3>{s.title}</h3>
           <div className="muted">
-            {s.artist}
+            <ArtistLink name={s.artist} />
             {s.plays > 0 && <> · {fmt(s.plays)} open plays</>}
           </div>
         </div>

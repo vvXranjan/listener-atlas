@@ -8,6 +8,7 @@ import { canQueue, queueSong, isLoggedIn, logout, login } from './spotify.js';
 import { getSet, saveSet, onSetChange, getPlayed, onPlayedChange, clearPlayed, getPrefs, setPref, onPrefsChange } from './setStore.js';
 import { bestNextFor, useSpotifyQueue, UP_NEXT } from './setSync.js';
 import { idOf, firstArtist, getJson, useAnalyses, Chips, Link, SongSearch } from './mixParts.jsx';
+import ArtistLink from './ArtistLink.jsx';
 
 // "Your set": your own list of songs, how well they flow, best order and Auto-DJ.
 // Lives inside Mix Lab, or pops out as a floating window.
@@ -223,7 +224,9 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                         <li key={`${idOf(p)}|${p.playedAt || ''}`}>
                           {p.cover ? <img src={p.cover} alt="" /> : <div className="ph" />}
                           <span className="un-title">{p.title}</span>
-                          <span className="tr-artist">{p.artist}</span>
+                          <span className="tr-artist">
+                            <ArtistLink name={p.artist} />
+                          </span>
                           <button className="gx-fxbtn" title="Add back to the set" onClick={() => addToSet(p)}>
                             ↺
                           </button>
@@ -269,7 +272,9 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                             )}
                             {s.title}
                           </div>
-                          <div className="tr-artist">{s.artist}</div>
+                          <div className="tr-artist">
+                            <ArtistLink name={s.artist} />
+                          </div>
                           <Chips a={cur} small noPreview={!s.preview} />
                           {live[idOf(s)] && <div className={`ml-livestep ${live[idOf(s)].startsWith('⚠') ? 'err' : ''}`}>{live[idOf(s)]}</div>}
                           {queued[idOf(s)] && !['ok', 'busy'].includes(queued[idOf(s)]) && (
@@ -309,7 +314,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                     <div className="un-body">
                       <div className="un-title">{x.title}</div>
                       <div className="tr-artist">
-                        {x.artist} · {x.habit ? `🔁 ${x.habit}` : `${x.match}% match`}
+                        <ArtistLink name={x.artist} /> · {x.habit ? `🔁 ${x.habit}` : `${x.match}% match`}
                       </div>
                     </div>
                     <button className="btn-ghost sm" onClick={() => addToSet(x)}>
