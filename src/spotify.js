@@ -1,7 +1,7 @@
 // Spotify login (PKCE, no secret needed) + "what am I playing right now".
 // Needs a free Spotify developer app (Premium account) — see README.
 
-const SCOPES = 'user-read-currently-playing user-read-playback-state';
+const SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
 const KEY = 'spotifyAuth';
 
 export function getClientId() {
@@ -61,6 +61,7 @@ function saveTokens(j) {
     access: j.access_token,
     refresh: j.refresh_token || prev?.refresh,
     expiresAt: Date.now() + (j.expires_in - 60) * 1000,
+    scope: j.scope || prev?.scope || '',
   };
   try {
     localStorage.setItem(KEY, JSON.stringify(auth));
@@ -162,4 +163,31 @@ export async function currentlyPlaying() {
       cover: it.album?.images?.[0]?.url,
     },
   };
+}
+
+// Can we add songs to the queue? (needs the newer permission; older logins must reconnect)
+export function canQueue() {
+  return (load()?.scope || '').includes('user-modify-playback-state');
+}
+
+// Find a song on Spotify and add it to your queue (Premium)
+export async function queueSong(title, artist) {
+  const t = await token();
+  if (!t) throw new Error('Connect Spotify first');
+  const clean = title.replace(/\s*[([].*?[)\]]/g, '').trim();
+  const q = encodeURIComponent(`track:${clean} artist:${artist.split(/,|&| with /)[0].trim()}`);
+  const s = await fetch(`https://api.spotify.com/v1/search?type=track&limit=1&q=${q}`, {
+    headers: { Authorization: `Bearer ${t}` },
+  });
+  if (!s.ok) throw new Error(`Spotify search failed (${s.status})`);
+  const item = (await s.json()).tracks?.items?.[0];
+  if (!item) throw new Error('Not found on Spotify');
+  const r = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(item.uri)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${t}` },
+  });
+  if (r.status === 404) throw new Error('Open Spotify and start playing on a device first');
+  if (r.status === 403 || r.status === 401) throw new Error('Reconnect Spotify to allow adding to your queue');
+  if (!r.ok) throw new Error(`Spotify queue failed (${r.status})`);
+  return { name: item.name, artist: item.artists?.[0]?.name, url: item.external_urls?.spotify };
 }

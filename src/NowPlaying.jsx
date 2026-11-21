@@ -20,7 +20,7 @@ const mmss = (ms) => {
 };
 
 // Your Spotify, live: shows the song you're playing and lets you dig into who listens to it.
-export default function NowPlaying({ onSongChange, onDetails, onShowOnGlobe, follow, setFollow }) {
+export default function NowPlaying({ onSongChange, onDetails, onMixLab, onShowOnGlobe, follow, setFollow }) {
   const [connected, setConnected] = useState(isLoggedIn());
   const [np, setNp] = useState(null);
   const [error, setError] = useState('');
@@ -151,7 +151,10 @@ export default function NowPlaying({ onSongChange, onDetails, onShowOnGlobe, fol
             <span>{mmss(tr.durationMs)}</span>
           </div>
           <div className="np-actions">
-            <button className="btn-green sm" onClick={() => onDetails(tr)}>
+            <button className="btn-green sm" onClick={() => onMixLab(tr)}>
+              ✦ Mix Lab: what's next?
+            </button>
+            <button className="btn-ghost sm" onClick={() => onDetails(tr)}>
               Who's listening?
             </button>
             <button className="btn-ghost sm" onClick={() => onShowOnGlobe(tr)}>

@@ -11,6 +11,7 @@ import LiveTicker from './LiveTicker.jsx';
 import Shazam from './Shazam.jsx';
 import NowPlaying from './NowPlaying.jsx';
 import SongDrawer from './SongDrawer.jsx';
+import MixLab from './MixLab.jsx';
 import { getArtistCities, toStates, SAMPLE_ARTISTS } from './data.js';
 import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
@@ -131,6 +132,7 @@ export default function App() {
   const [cityMoves, setCityMoves] = useState({});
   const [drawer, setDrawer] = useState(null);
   const [song, setSong] = useState(null); // song drawer
+  const [mixLab, setMixLab] = useState(null); // Mix Lab: { track } or null
   const [follow, setFollow] = useState(() => {
     try {
       return localStorage.getItem('followMusic') !== '0';
@@ -571,10 +573,35 @@ export default function App() {
   }
 
   // Frame an artist: one country -> fly there, many -> view from space
+  // Frame an artist: zoom into the country where they have the most listeners,
+  // fitting all their cities there on screen (other countries: use Autopilot to tour).
   function frameGroups(gs) {
     if (!gs.length) return;
-    if (gs.length === 1) flyToPlace({ center: gs[0].center, zoom: countryZoom(gs[0].cc), pitch: 50 });
-    else flyToPlace({ center: gs[0].center, zoom: 1.9, pitch: 0 });
+    const map = mapRef.current;
+    const main = gs[0];
+    let center = main.center;
+    let zoom = countryZoom(main.cc);
+    if (map && main.points.length > 1) {
+      const lngs = main.points.map((p) => p.position[0]);
+      const lats = main.points.map((p) => p.position[1]);
+      try {
+        const cam = map.cameraForBounds(
+          [
+            [Math.min(...lngs), Math.min(...lats)],
+            [Math.max(...lngs), Math.max(...lats)],
+          ],
+          { padding: { top: 140, bottom: 170, left: 380, right: 380 }, maxZoom: 7 }
+        );
+        if (cam?.center && Number.isFinite(cam.zoom)) {
+          center = [cam.center.lng, cam.center.lat];
+          zoom = cam.zoom;
+        }
+      } catch {
+        /* fall back to the country view */
+      }
+    }
+    zoom = Math.max(3.2, Math.min(zoom, 7));
+    flyToPlace({ center, zoom, pitch: 52, bearing: -12 });
   }
 
   // ---------- autopilot ----------
@@ -691,7 +718,16 @@ export default function App() {
       setStatus(null);
       showArtistOnGlobe(a);
     } catch (e) {
-      setStatus({ error: true, text: e.message });
+      // no token yet: a gentle hint, not an error
+      const noToken = /APIFY_TOKEN/.test(e.message);
+      setStatus({
+        hint: noToken,
+        error: !noToken,
+        text: noToken
+          ? `${main} isn't in your artist list yet. Add an Apify token to load any artist's cities.`
+          : e.message,
+      });
+      setTimeout(() => setStatus((s) => (s?.text?.startsWith(main) ? null : s)), 10000);
     }
   }
 
@@ -879,6 +915,7 @@ export default function App() {
               if (followRef.current) showSongOnGlobe(t);
             }}
             onDetails={(t) => setSong(t)}
+            onMixLab={(t) => setMixLab({ track: t })}
             onShowOnGlobe={(t) => showSongOnGlobe(t)}
           />
         )}
@@ -913,7 +950,7 @@ export default function App() {
         </form>
         )}
         {status && (
-          <div className={`status ${status.error ? 'err' : ''} ${status.loading ? 'loading' : ''}`}>
+          <div className={`status ${status.error ? 'err' : ''} ${status.hint ? 'hint' : ''} ${status.loading ? 'loading' : ''}`}>
             {status.text}
           </div>
         )}
@@ -1083,6 +1120,8 @@ export default function App() {
           </button>
         ))}
         <span className="sep" />
+        <button onClick={() => setMixLab({ track: null })}>🎛 Mix Lab</button>
+        <span className="sep" />
         <button className={spin ? 'active' : ''} onClick={toggleSpin}>
           {spin ? '⏸ Spinning' : '🌍 Globe'}
         </button>
@@ -1110,8 +1149,14 @@ export default function App() {
           openCity({ name: c.city, country: c.country, position: c.position });
         }}
         onChartPins={setChartPins}
+        onMixLab={(t) => {
+          setSong(null);
+          setMixLab({ track: t });
+        }}
         onClose={() => setSong(null)}
       />
+
+      {mixLab && <MixLab track={mixLab.track} onArtist={(a) => openArtist(a)} onClose={() => setMixLab(null)} />}
 
       <ArtistDrawer
         artist={drawer}

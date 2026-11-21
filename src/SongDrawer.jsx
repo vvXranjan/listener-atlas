@@ -5,7 +5,7 @@ const fmt = (n) =>
   n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n);
 
 // "Who's listening to this song?" — the closest public signals Spotify & friends allow.
-export default function SongDrawer({ track, findArtist, fetchArtist, onArtist, onShowArtist, onCity, onChartPins, onClose }) {
+export default function SongDrawer({ track, findArtist, fetchArtist, onArtist, onShowArtist, onCity, onChartPins, onMixLab, onClose }) {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState({}); // name -> artist | {error}
@@ -84,6 +84,14 @@ export default function SongDrawer({ track, findArtist, fetchArtist, onArtist, o
               </a>
             )}
           </div>
+
+          <button className="ml-cta" onClick={() => onMixLab(track)}>
+            <span className="spark">✦</span>
+            <span>
+              <b>Mix Lab: what should play next?</b>
+              <small>Best transitions by tempo, key and energy, plus build your own set.</small>
+            </span>
+          </button>
 
           <p className="note">
             Spotify doesn't share who is listening to a song, or live counts per song. Below are the closest public

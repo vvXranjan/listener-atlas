@@ -72,24 +72,76 @@ export async function songCharts(title, artists, budgetMs = Infinity) {
 let mbQueue = Promise.resolve();
 const MB_HEADERS = { 'User-Agent': 'ListenerAtlas/1.0 (personal project)', Accept: 'application/json' };
 
-// MusicBrainz allows ~1 request per second, so calls are queued
-function mbFetch(url) {
+// MusicBrainz allows ~1 request per second, so calls are queued (and retried when busy)
+export function mbFetch(url, { tries = 3 } = {}) {
   const run = mbQueue.then(async () => {
-    const r = await fetch(url, { headers: MB_HEADERS });
-    await new Promise((res) => setTimeout(res, 1100));
-    if (!r.ok) throw new Error(`MusicBrainz ${r.status}`);
-    return r.json();
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const r = await fetch(url, { headers: MB_HEADERS });
+      await new Promise((res) => setTimeout(res, 1100 * (attempt + 1)));
+      if (r.ok) return r.json();
+      if (r.status !== 503 && r.status !== 429) throw new Error(`MusicBrainz ${r.status}`);
+    }
+    throw new Error('MusicBrainz is busy right now');
   });
   mbQueue = run.catch(() => {});
   return run;
 }
 
+// Fast exact match from ListenBrainz's hosted copy of MusicBrainz (no rate limit issues)
+export async function acrLookupFull(title, artist) {
+  return cached(`acr|${strip(title)}|${strip(artist)}`, 24 * 3600 * 1000, async () => {
+    const t = title.replace(/\s*[([].*?[)\]]/g, '').replace(/\s+-\s+.*$/, '').trim();
+    const r = await fetch(
+      `https://labs.api.listenbrainz.org/acr-lookup/json?artist_credit_name=${encodeURIComponent(artist)}&recording_name=${encodeURIComponent(t)}`
+    );
+    if (!r.ok) return null;
+    const j = await r.json();
+    const hit = Array.isArray(j) ? j[0] : null;
+    return hit?.recording_mbid ? { recordingMbid: hit.recording_mbid, artistMbids: hit.artist_mbids || [] } : null;
+  });
+}
+
+async function acrLookup(title, artist) {
+  return (await acrLookupFull(title, artist).catch(() => null))?.recordingMbid || null;
+}
+
+// An artist's MusicBrainz ID by name (cached for a week)
+export async function artistMbid(name) {
+  return cached(`artist-mbid|${strip(name)}`, 7 * 24 * 3600 * 1000, async () => {
+    const mb = await mbFetch(
+      `https://musicbrainz.org/ws/2/artist?fmt=json&limit=5&query=${encodeURIComponent(`artist:"${name.replace(/"/g, '')}"`)}`,
+      { tries: 1 }
+    );
+    const exact = (mb.artists || []).find((a) => a.score >= 90 && strip(a.name) === strip(name));
+    return exact?.id || (mb.artists || []).find((a) => a.score === 100)?.id || null;
+  });
+}
+
+// MusicBrainz IDs for a song. quick = the single best match is enough.
+export async function findRecordingIds(title, artist, { quick = false } = {}) {
+  return cached(`mbid|${quick}|${strip(title)}|${strip(artist)}`, 24 * 3600 * 1000, async () => {
+    const ids = [];
+    const exact = await acrLookup(title, artist).catch(() => null);
+    if (exact) ids.push(exact);
+    if (quick && ids.length) return ids;
+    // several versions of a song can exist; search for the rest
+    try {
+      const t = title.replace(/\s*[([].*?[)\]]/g, '').replace(/"/g, '').trim();
+      const q = `recording:"${t}" AND artist:"${artist.replace(/"/g, '')}"`;
+      const mb = await mbFetch(`https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=${encodeURIComponent(q)}`, {
+        tries: quick ? 1 : 3,
+      });
+      for (const r of mb.recordings || []) if (r.score >= 90 && !ids.includes(r.id)) ids.push(r.id);
+    } catch (e) {
+      if (!ids.length) throw e;
+    }
+    return ids;
+  });
+}
+
 export async function songListens(title, artist) {
   return cached(`lb|${strip(title)}|${strip(artist)}`, 3600 * 1000, async () => {
-    const t = title.replace(/\s*[([].*?[)\]]/g, '').replace(/"/g, '').trim();
-    const q = `recording:"${t}" AND artist:"${artist.replace(/"/g, '')}"`;
-    const mb = await mbFetch(`https://musicbrainz.org/ws/2/recording?fmt=json&limit=50&query=${encodeURIComponent(q)}`);
-    const ids = (mb.recordings || []).filter((r) => r.score >= 90).map((r) => r.id);
+    const ids = await findRecordingIds(title, artist);
     if (!ids.length) return { listens: 0, listeners: 0, recordings: 0 };
     const r = await fetch('https://api.listenbrainz.org/1/popularity/recording', {
       method: 'POST',

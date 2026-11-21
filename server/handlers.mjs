@@ -20,7 +20,13 @@ function readLive() {
 const json = (status, body) => ({ status, body });
 const artistCache = new Map();
 
-export const ROUTES = ['live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights'];
+export const ROUTES = [
+  'live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights', 'recommend',
+  'song-search', 'preview', 'audio',
+];
+
+// Only Apple's preview servers may be proxied (stops the proxy being used for anything else)
+export const AUDIO_HOSTS = /^https:\/\/(audio-ssl\.itunes\.apple\.com|[a-z0-9-]+\.mzstatic\.com)\//;
 
 /**
  * @param {object} req
@@ -92,6 +98,60 @@ export async function handle({ route, method = 'GET', query = {}, body = null, e
         if (!title || !artists.length) return json(400, { error: 'title and artists are required' });
         const { songInsights } = await import('./song.mjs');
         return json(200, await songInsights(title, artists, { budgetMs: Number(env.SONG_SCAN_BUDGET_MS) || 8000 }));
+      }
+
+      case 'recommend': {
+        const title = q('title');
+        const artists = q('artists')
+          .split('|')
+          .map((x) => x.trim())
+          .filter(Boolean);
+        if (!title || !artists.length) return json(400, { error: 'title and artists are required' });
+        const { recommend } = await import('./recommend.mjs');
+        return json(200, await recommend(title, artists, env));
+      }
+
+      case 'song-search': {
+        const term = q('q');
+        if (term.length < 2) return json(400, { error: 'Type at least 2 letters' });
+        const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=10`);
+        if (!r.ok) return json(502, { error: `Song search failed (${r.status})` });
+        const j = await r.json();
+        return json(
+          200,
+          (j.results || []).map((t) => ({
+            title: t.trackName,
+            artist: t.artistName,
+            album: t.collectionName,
+            cover: t.artworkUrl100?.replace('100x100bb', '300x300bb') || null,
+            preview: t.previewUrl || null,
+            appleUrl: t.trackViewUrl || null,
+            genre: t.primaryGenreName || null,
+            year: t.releaseDate?.slice(0, 4) || null,
+          }))
+        );
+      }
+
+      case 'preview': {
+        if (!q('title') || !q('artist')) return json(400, { error: 'title and artist are required' });
+        const { itunesSong } = await import('./recommend.mjs');
+        const song = await itunesSong(q('title'), q('artist'));
+        return song ? json(200, song) : json(404, { error: 'No preview found' });
+      }
+
+      case 'audio': {
+        const u = q('u');
+        if (!AUDIO_HOSTS.test(u)) return json(400, { error: 'Only Apple Music previews can be loaded' });
+        const r = await fetch(u);
+        if (!r.ok) return json(502, { error: `Preview download failed (${r.status})` });
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length > 4 * 1024 * 1024) return json(413, { error: 'Preview too large' });
+        return {
+          status: 200,
+          binary: true,
+          body: buf,
+          headers: { 'Content-Type': r.headers.get('content-type') || 'audio/mp4', 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
+        };
       }
 
       default:

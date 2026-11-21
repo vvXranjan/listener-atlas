@@ -14,8 +14,19 @@ if (audio) {
   });
 }
 
+// other players (the Mix Lab crossfade) register here so only one thing plays at once
+export const stopOthers = new Set();
+
+export function stopPreview() {
+  if (!audio || !current) return;
+  audio.pause();
+  current = null;
+  emit();
+}
+
 export function togglePreview(url) {
   if (!audio || !url) return;
+  stopOthers.forEach((fn) => fn());
   if (current === url) {
     audio.pause();
     current = null;
