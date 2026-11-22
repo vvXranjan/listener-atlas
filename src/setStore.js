@@ -77,7 +77,7 @@ export function onPlayedChange(fn) {
 }
 
 // ---- set options
-export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false, radio: true, habitWeight: 0.5 };
+export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false, radio: true, habitWeight: 0.5, djMode: 'auto' };
 export const getPrefs = () => ({ ...DEFAULT_PREFS, ...read(PREFS_KEY, {}) });
 export function setPref(k, v) {
   const p = { ...getPrefs(), [k]: v };

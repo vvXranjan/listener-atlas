@@ -543,6 +543,9 @@ function pump() {
   }
 }
 
+// already measured? (no work, no waiting)
+export const cachedAnalysis = (url) => (url ? store()[url] || null : null);
+
 // priority: smaller = sooner (e.g. the songs you can see on screen first)
 export function analyzePreview(previewUrl, priority = 100) {
   if (!previewUrl) return Promise.resolve(null);

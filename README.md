@@ -147,11 +147,34 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
   - **Stays on time in a background tab**: its clock runs in a Web Worker, which browsers don't slow down.
   - **Skips stray queue songs**: Spotify always plays its own queue first. If an old queued song starts right as your song ends, Auto-DJ skips it and plays your next set song (it shows "skipped N from queue").
   - **Never fights you**: pick a different song mid-way and Auto-DJ pauses; press **▶ Resume set** (or play a set song) to continue.
+  - **On by default**: when you're connected and your set has songs, Auto-DJ switches itself on in *ready* mode. It never starts music by itself; it takes over when the song you're playing ends. Turn it off with the **Auto-DJ ON/OFF** switch.
+  - **Late adds still make it**: it checks your Spotify queue every 5 s mid-song, every 1 s in the last 25 s, and once more right at the switch. A song you queue even during the fade plays next, with no extra skip or restart.
+  - **Light on Spotify**: what's playing is read every 2 s mid-song and every 1 s in the last 30 s (free with "⇣ Play here"), and every 3 s when nothing plays.
+  - **Transition modes** (change them any time, even while it runs):
+    | Mode | What it does |
+    |---|---|
+    | 🤖 **AI auto** (default) | Picks the transition for each pair from tempo, key and energy, and shows why ("Big tempo jump: echo out on the beat") |
+    | 🌊 Smooth | 12 s fade out, 8 s fade in |
+    | ⚡ Quick cut | Switch in under 2 s |
+    | 🔁 Echo out | Volume steps down on each beat for 8 beats, then the next song hits |
+    | 🔥 Hype | Short fade, next song starts about 20 s in (past the intro) |
+    | 🌙 Chill | Very slow fade, a short silence, slow fade in |
+
+    While a song plays, Auto-DJ measures the playing and next songs from their previews in the background, so the plan is ready before the mix. Spotify plays one song at a time per device, so transitions are shaped with volume, timing and start position (two songs can't overlap).
   - **Hears your phone**: queue a song in Spotify from your phone (or any device) while Auto-DJ runs and it **plays next** with a fade, joins the set tagged **📱 you queued**, then the set carries on. Songs that were already in your queue *before* Auto-DJ started count as old and are skipped. (Spotify lists your queued songs before the playlist's own next songs; Auto-DJ uses that to tell them apart.)
   - **Radio**: when the set runs out, it adds the best next song itself (your habits first, then recommendations, never a song you played in the last hour), tagged **🔁 habit** or **auto**. Turn it off with *Radio: keep going after the set*.
 - **The floating window**: drag it anywhere, it snaps to edges and corners (◰ ◳ ◱ ◲), resizes from any edge, minimises (– or double-click), and includes a mini player.
 
 > Spotify plays one song at a time per account, so transitions are smooth fades, not overlaps. For true overlap, turn on *Crossfade songs* in the Spotify app (Settings → Playback).
+
+### Genres
+
+Every genre chip in the Artist Galaxy (e.g. Future → *southern hip hop*) is clickable. It opens a genre page with:
+- the artist's own top songs in that genre,
+- the **top songs** of the genre, ranked by open listens (the artist's songs are highlighted), with previews, ⇄ Mix Lab and **+ Set** (or **Add top 10 to my set**),
+- the **biggest artists** in the genre; tap one to open their Galaxy.
+
+Data: ListenBrainz tag radio + listen counts (`/api/genre?tag=`). Genres come from listener tags, so the edges are fuzzy.
 
 ### Your habits (what you play after what)
 
@@ -341,7 +364,7 @@ tests/                    Vitest tests
 
 ## Tests
 
-Run the 84 tests:
+Run the 94 tests:
 
 ```bash
 npm test

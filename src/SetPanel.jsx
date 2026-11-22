@@ -9,6 +9,7 @@ import { getSet, saveSet, onSetChange, getPlayed, onPlayedChange, clearPlayed, g
 import { bestNextFor, useSpotifyQueue, UP_NEXT } from './setSync.js';
 import { idOf, firstArtist, getJson, useAnalyses, Chips, Link, SongSearch } from './mixParts.jsx';
 import ArtistLink from './ArtistLink.jsx';
+import { MODES, modeInfo } from './djModes.js';
 
 // "Your set": your own list of songs, how well they flow, best order and Auto-DJ.
 // Lives inside Mix Lab, or pops out as a floating window.
@@ -16,7 +17,6 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
   const [set, setSetState] = useState(getSet);
   const setSet = useCallback((fn) => saveSet(typeof fn === 'function' ? fn(getSet()) : fn), []);
   const [suggest, setSuggest] = useState(null); // { order, score, was } from "Best order"
-  const [djOpts, setDjOpts] = useState({ fade: 7000, skipIntro: false });
   const dj = useAutoDj();
   const [queued, setQueued] = useState({});
   const [queueAll, setQueueAll] = useState(null);
@@ -159,7 +159,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
   function startDj() {
     stopMix();
     stopPreview();
-    startAutoDj({ fadeOutMs: djOpts.fade, fadeInMs: Math.round(djOpts.fade * 0.6), skipIntroMs: djOpts.skipIntro ? 15000 : 0 });
+    startAutoDj({});
   }
 
 
@@ -406,6 +406,17 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                         {dj.queuedByYou > 0 && <span title="Songs you queued from your phone or another device while Auto-DJ ran">📱 {dj.queuedByYou} queued by you</span>}
                         {dj.skipped > 0 && <span title="Old songs in your Spotify queue that Auto-DJ skipped to stay on your set">skipped {dj.skipped} old from queue</span>}
                       </div>
+                      {dj.plan && dj.next && (
+                        <div className="dj-plan" title="How Auto-DJ will move into the next song">
+                          <b>
+                            {dj.plan.icon} {dj.plan.label}
+                            {dj.plan.auto ? ' (AI)' : ''}
+                          </b>{' '}
+                          · {dj.plan.why}
+                        </div>
+                      )}
+                      <DjModes mode={prefs.djMode || 'auto'} />
+
                       <div className="un-actions">
                         {dj.paused ? (
                           <button className="btn-green sm" disabled={dj.mixing || !set.length} onClick={resumeSet}>
@@ -434,24 +445,9 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                           Queue all
                         </button>
                       </div>
-                      <div className="ml-dj-opts">
-                        <span className="muted">Transition:</span>
-                        {[
-                          [4000, 'Quick 4s'],
-                          [7000, 'Smooth 7s'],
-                          [11000, 'Long 11s'],
-                        ].map(([ms, l]) => (
-                          <button key={ms} className={`gx-fxbtn ${djOpts.fade === ms ? 'on' : ''}`} onClick={() => setDjOpts((o) => ({ ...o, fade: ms }))}>
-                            {l}
-                          </button>
-                        ))}
-                        <label className="np-follow">
-                          <input type="checkbox" checked={djOpts.skipIntro} onChange={(e) => setDjOpts((o) => ({ ...o, skipIntro: e.target.checked }))} />
-                          Skip intros (start 15s in)
-                        </label>
-                      </div>
+                      <DjModes mode={prefs.djMode || 'auto'} />
                       <div className="muted ml-dj-note">
-                        Auto-DJ lets the current song play, then near the end fades it out and fades the next one in. Smoothest with "⇣ Play here".
+                        Auto-DJ lets the current song play, then near the end moves into the next one in the style you pick. It measures each song in the background while you listen. Smoothest with "⇣ Play here".
                       </div>
                     </>
                   )
@@ -475,5 +471,21 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
 
             <SongSearch onAdd={addToSet} inSet={inChain} />
           </section>
+  );
+}
+
+// Transition style for Auto-DJ (can be changed while it runs; the next transition uses it)
+function DjModes({ mode }) {
+  return (
+    <div className="dj-modes">
+      <div className="dj-mode-row">
+        {MODES.map((m) => (
+          <button key={m.id} className={`gx-fxbtn ${mode === m.id ? 'on' : ''}`} title={m.desc} onClick={() => setPref('djMode', m.id)}>
+            {m.icon} {m.label}
+          </button>
+        ))}
+      </div>
+      <div className="muted dj-mode-desc">{modeInfo(mode).desc}</div>
+    </div>
   );
 }

@@ -28,6 +28,7 @@ const CACHE = {
   'song-search': 'public, s-maxage=3600',
   preview: 'public, s-maxage=86400',
   galaxy: 'public, s-maxage=21600',
+  genre: 'public, s-maxage=21600',
   habits: 'private, no-store', // personal: never cached
 };
 

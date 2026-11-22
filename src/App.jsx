@@ -10,12 +10,14 @@ import ArtistDrawer from './ArtistDrawer.jsx';
 import Starfield from './Starfield.jsx';
 import LiveTicker from './LiveTicker.jsx';
 import Shazam from './Shazam.jsx';
+import AutoDjFab from './AutoDjFab.jsx';
 import NowPlaying from './NowPlaying.jsx';
 import SongDrawer from './SongDrawer.jsx';
 import Safe from './Safe.jsx';
 // big panels load only when you first open them (faster start)
 const MixLab = lazy(() => import('./MixLab.jsx'));
 const ArtistGalaxy = lazy(() => import('./ArtistGalaxy.jsx'));
+const GenreView = lazy(() => import('./GenreView.jsx'));
 const Library = lazy(() => import('./Library.jsx'));
 const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
 import { useNowItem } from './mixParts.jsx';
@@ -111,6 +113,7 @@ export default function App() {
   const [song, setSong] = useState(null); // song drawer
   const [mixLab, setMixLab] = useState(null); // Mix Lab: { track } or null
   const [galaxy, setGalaxy] = useState(null); // artist name shown in the Artist Galaxy
+  const [genre, setGenre] = useState(null); // { tag, artist, songs } shown in the genre page
   const [library, setLibrary] = useState(false); // your Spotify library popup
   const [nowTrack, setNowTrack] = useState(null); // what's playing on your Spotify
   const { mode: perfMode, quality } = usePerf();
@@ -412,9 +415,18 @@ export default function App() {
 
   // click any artist name anywhere → open their Galaxy
   useEffect(() => {
-    const on = (e) => e.detail && setGalaxy(e.detail);
+    const on = (e) => {
+      if (!e.detail) return;
+      setGenre(null);
+      setGalaxy(e.detail);
+    };
+    const onGenre = (e) => e.detail?.tag && setGenre(e.detail);
     window.addEventListener('open-galaxy', on);
-    return () => window.removeEventListener('open-galaxy', on);
+    window.addEventListener('open-genre', onGenre);
+    return () => {
+      window.removeEventListener('open-galaxy', on);
+      window.removeEventListener('open-genre', onGenre);
+    };
   }, []);
 
   // open the artist page; artists from charts may not be in our Spotify data
@@ -1017,6 +1029,9 @@ export default function App() {
       <Safe name="Shazam" quiet>
         <Shazam onArtist={openArtist} />
       </Safe>
+      <Safe name="Auto-DJ switch" quiet>
+        <AutoDjFab onOpenSet={() => setMixLab({ track: nowTrack })} />
+      </Safe>
 
       <SongDrawer
         track={song}
@@ -1095,6 +1110,23 @@ export default function App() {
             name={galaxy}
             onClose={() => setGalaxy(null)}
             onMixLab={(t) => {
+              setGalaxy(null);
+              setMixLab({ track: t });
+            }}
+          />
+        </Safe>
+      )}
+
+      {genre && (
+        <Safe name="Genre" onClose={() => setGenre(null)}>
+          <GenreView
+            key={genre.tag}
+            tag={genre.tag}
+            artist={genre.artist}
+            artistSongs={genre.songs}
+            onClose={() => setGenre(null)}
+            onMixLab={(t) => {
+              setGenre(null);
               setGalaxy(null);
               setMixLab({ track: t });
             }}

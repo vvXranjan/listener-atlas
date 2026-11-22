@@ -16,6 +16,7 @@ vi.mock('../src/spotifyPlayer.js', () => ({
 let spotifyQueue = []; // fake Spotify queue
 vi.mock('../src/spotify.js', () => ({
   getQueue: vi.fn(async () => ({ queue: spotifyQueue.map((t) => ({ title: t, artist: 'x', uri: `spotify:track:${t}` })) })),
+  seekTo: vi.fn(async () => {}),
   nextTrack: vi.fn(async () => {
     const t = spotifyQueue.shift();
     log.push(['skip', t]);
@@ -35,7 +36,7 @@ vi.mock('../src/spotify.js', () => ({
   }),
 }));
 
-const { startAutoDj, stopAutoDj, mixNow, resumeSet, autoDjState, nextInSet } = await import('../src/autoDj.js');
+const { startAutoDj, stopAutoDj, mixNow, resumeSet, autoDjState, nextInSet, newlyQueued } = await import('../src/autoDj.js');
 const { saveSet, getSet } = await import('../src/setStore.js');
 await import('../src/setSync.js'); // radio mode loads this on demand; load it up front for the frozen test clock
 const song = (t) => ({ title: t, artist: 'x' });
@@ -91,7 +92,7 @@ describe('Auto-DJ stays in sync with your set and Spotify', () => {
     pb.positionMs = 30000; // middle of A
     await vi.advanceTimersByTimeAsync(1100);
     pb = { ...pb, uri: 'spotify:track:MINE', name: 'My pick', positionMs: 0 };
-    await vi.advanceTimersByTimeAsync(1100);
+    await vi.advanceTimersByTimeAsync(2200);
     expect(autoDjState().paused).toBe(true);
     expect(plays()).toHaveLength(1); // it did not fight you
     const r = resumeSet();
@@ -120,7 +121,7 @@ describe('Auto-DJ stays in sync with your set and Spotify', () => {
     await vi.advanceTimersByTimeAsync(1000);
     await start;
     spotifyQueue = ['PHONE', 'OLD', 'A', 'B']; // you queued PHONE from your phone
-    await vi.advanceTimersByTimeAsync(3500);
+    await vi.advanceTimersByTimeAsync(5500);
     expect(getSet().map((s) => s.title)).toEqual(['A', 'PHONE', 'B']);
     expect(getSet()[1].queued).toBe(true);
     expect(autoDjState().queuedByYou).toBe(1);
@@ -146,4 +147,117 @@ describe('Auto-DJ stays in sync with your set and Spotify', () => {
     await vi.advanceTimersByTimeAsync(4000);
     expect(plays().at(-1)).toBe('spotify:track:RADIO1'); // and it plays it
   });
+
+  it('a song you queue mid-song plays next even if it was already in your old queue/playlist', async () => {
+    saveSet([song('A'), song('B'), song('C')]);
+    spotifyQueue = ['X', 'Y', 'Z']; // the playlist you had on before (X is in it)
+    pb.isPlaying = false;
+    const start = startAutoDj({});
+    await vi.advanceTimersByTimeAsync(1000);
+    await start;
+    spotifyQueue = ['B', 'C']; // Auto-DJ's list replaced the old playlist
+    await vi.advanceTimersByTimeAsync(5500);
+    spotifyQueue = ['X', 'B', 'C']; // mid-song you queue X from your phone
+    await vi.advanceTimersByTimeAsync(5500);
+    expect(getSet().map((s) => s.title)).toEqual(['A', 'X', 'B', 'C']);
+    pb.positionMs = pb.durationMs - 7000; // A ends: X plays, not B
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(log.filter((l) => l[0] === 'skip')).toEqual([['skip', 'X']]);
+    expect(pb.name).toBe('X');
+    pb.positionMs = pb.durationMs - 7000; // X ends: back to the set at B
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(plays().at(-1)).toBe('spotify:track:B,spotify:track:C');
+  });
+
+  it('if Spotify plays your queued song on its own, Auto-DJ keeps it instead of skipping', async () => {
+    saveSet([song('A'), song('B')]);
+    pb.isPlaying = false;
+    const start = startAutoDj({});
+    await vi.advanceTimersByTimeAsync(1000);
+    await start;
+    spotifyQueue = ['B'];
+    await vi.advanceTimersByTimeAsync(5500);
+    pb.positionMs = pb.durationMs - 9000;
+    pb.isPlaying = false; // we missed the end (tab asleep)
+    spotifyQueue = ['X', 'B']; // you queued X
+    await vi.advanceTimersByTimeAsync(3100);
+    pb = { ...pb, uri: 'spotify:track:X', name: 'X', artist: 'x', positionMs: 1000, isPlaying: true };
+    spotifyQueue = ['B'];
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(autoDjState().skipped).toBe(0);
+    expect(autoDjState().paused).toBe(false);
+    expect(getSet().map((s) => s.title)).toEqual(['A', 'X', 'B']);
+    expect(nextInSet(pb).title).toBe('B');
+  });
+
+  it('newlyQueued ignores the playlist scrolling on and autoplay batches', () => {
+    const q = (...ids) => ids.map((u) => ({ uri: u }));
+    const prev = new Map([['p1', 1], ['p2', 1], ['p3', 1]]);
+    expect(newlyQueued(q('p2', 'p3', 'p4'), prev, new Set()).fresh).toEqual([]); // p4 appeared at the end
+    expect(newlyQueued(q('n', 'p2', 'p3', 'p4'), prev, new Set()).fresh.map((t) => t.uri)).toEqual(['n']);
+    expect(newlyQueued(q('a1', 'a2', 'a3', 'a4', 'a5'), new Map(), new Set(['s'])).fresh).toEqual([]); // autoplay
+  });
+
+  it('Echo out mode steps the volume down on the beat, then the next song comes in', async () => {
+    const { setPref } = await import('../src/setStore.js');
+    setPref('djMode', 'echo');
+    saveSet([song('A'), song('B')]);
+    pb.isPlaying = false;
+    const start = startAutoDj({});
+    await vi.advanceTimersByTimeAsync(1000);
+    await start;
+    log.length = 0;
+    pb.positionMs = pb.durationMs - 5000; // echo at 95 BPM ≈ 5 s
+    await vi.advanceTimersByTimeAsync(9000);
+    const fades = log.filter((l) => l[0] === 'fade');
+    expect(fades.length).toBeGreaterThanOrEqual(8); // one step per beat (+ gap + fade in)
+    expect(fades[1][1]).toBeLessThan(fades[0][1]); // going down step by step
+    expect(plays().at(-1)).toBe('spotify:track:B');
+    expect(autoDjState().plan.kind).toBe('echo');
+    setPref('djMode', 'auto');
+  });
+
+  it('a song you queue in the last seconds (even during the fade) still plays next', async () => {
+    const { setPref } = await import('../src/setStore.js');
+    setPref('djMode', 'smooth'); // 12 s fade
+    const sp = await import('../src/spotifyPlayer.js');
+    const instant = sp.fadeVolume.getMockImplementation();
+    sp.fadeVolume.mockImplementation(async (from, to, ms) => {
+      log.push(['fade', Math.round(from), Math.round(to)]);
+      await new Promise((r) => setTimeout(r, ms)); // fades take real time here
+      return true;
+    });
+    try {
+      saveSet([song('A'), song('B'), song('C')]);
+      pb.isPlaying = false;
+      const start = startAutoDj({});
+      await vi.advanceTimersByTimeAsync(10000); // first song fades in over 8 s
+      await start;
+      spotifyQueue = ['B', 'C'];
+      await vi.advanceTimersByTimeAsync(5500);
+      pb.positionMs = pb.durationMs - 13000; // the 12 s fade starts now
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(autoDjState().mixing).toBe(true);
+      spotifyQueue = ['LATE', 'B', 'C']; // you queue a song with ~10 s left, mid-fade
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(log.filter((l) => l[0] === 'skip')).toEqual([['skip', 'LATE']]); // Spotify's next = your song
+      expect(pb.name).toBe('LATE');
+      expect(getSet().map((s) => s.title)).toEqual(['A', 'LATE', 'B', 'C']);
+      expect(plays()).toHaveLength(1); // no extra play list: B and C still follow
+    } finally {
+      sp.fadeVolume.mockImplementation(instant);
+      setPref('djMode', 'auto');
+      await stopAutoDj();
+    }
+  });
+
+  it('passive start (app opened): does not start music by itself', async () => {
+    saveSet([song('A'), song('B')]);
+    pb.isPlaying = false;
+    await startAutoDj({ passive: true });
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(plays()).toHaveLength(0);
+    expect(autoDjState().on).toBe(true);
+  });
 });
+

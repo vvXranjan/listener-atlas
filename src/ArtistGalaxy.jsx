@@ -4,6 +4,7 @@ import { EFFECTS, playFx, stopFx, toggleFx, useFx } from './soundFx.js';
 import { canQueue, isLoggedIn, queueSong } from './spotify.js';
 import { mixOnSpotify } from './spotifyPlayer.js';
 import ArtistLink from './ArtistLink.jsx';
+import { GenreChip } from './GenreView.jsx';
 
 // Artist Galaxy: the artist in the center, their songs on the inner orbit
 // (grouped by mood), similar artists on the outer orbit (grouped by genre).
@@ -104,6 +105,88 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
   const fx = useFx();
   const alive = useRef(true);
 
+  // ---- 3D camera: the galaxy is a tilted disc that slowly turns; drag to spin / tilt
+  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const [cam, setCam] = useState({ spin: 0, tilt: 56, flat: false });
+  const [autoSpin, setAutoSpin] = useState(!reduced);
+  const camRef = useRef(cam);
+  camRef.current = cam;
+  const drag = useRef(null); // { x, y, spin, tilt, moved }
+  const holdSpin = !!hover || !!sel || cam.flat || !autoSpin;
+  useEffect(() => {
+    if (holdSpin) return;
+    let raf = 0;
+    let last = performance.now();
+    let acc = 0;
+    const step = (t) => {
+      const dt = Math.min(100, t - last);
+      last = t;
+      acc += dt;
+      // ~30 updates a second is plenty for a slow spin
+      if (acc >= 33 && !drag.current && !document.hidden) {
+        const deg = (acc / 1000) * 4; // one turn in ~90 s
+        acc = 0;
+        setCam((c) => ({ ...c, spin: (c.spin + deg) % 360 }));
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [holdSpin]);
+  const onPointerDown = (e) => {
+    if (cam.flat) return;
+    drag.current = { x: e.clientX, y: e.clientY, spin: cam.spin, tilt: cam.tilt, moved: false };
+  };
+  const onPointerMove = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) < 5) return;
+    d.moved = true;
+    setCam((c) => ({ ...c, spin: (d.spin - dx * 0.35 + 360) % 360, tilt: Math.max(30, Math.min(74, d.tilt - dy * 0.25)) }));
+  };
+  const onPointerUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d?.moved) {
+      dragged.current = true;
+      setTimeout(() => (dragged.current = false), 0);
+    }
+  };
+  const dragged = useRef(false); // swallow the click that ends a drag
+  const tap = (fn) => (e) => {
+    e.stopPropagation();
+    if (!dragged.current) fn(e);
+  };
+  // flat-plane point (0..1000) -> screen point with depth
+  const proj = useMemo(() => {
+    const sp = (cam.flat ? 0 : cam.spin) * (Math.PI / 180);
+    const a = (cam.flat ? 0 : cam.tilt) * (Math.PI / 180);
+    const f = 1500;
+    const cs = Math.cos(sp);
+    const sn = Math.sin(sp);
+    return (x, y) => {
+      const dx = x - C;
+      const dy = y - C;
+      const u = dx * cs - dy * sn;
+      const v = dx * sn + dy * cs;
+      const Z = v * Math.sin(a);
+      const sc = f / (f - Z);
+      return { x: C + u * sc, y: C + v * Math.cos(a) * sc, s: sc, z: Z };
+    };
+  }, [cam]);
+  const ringPath = (r) => {
+    let d = '';
+    for (let i = 0; i <= 64; i++) {
+      const t = (i / 64) * TAU;
+      const q = proj(C + Math.cos(t) * r, C + Math.sin(t) * r);
+      d += `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
+    }
+    return d;
+  };
+  const viewHalf = cam.flat ? 500 : Math.round(480 * Math.cos((cam.tilt * Math.PI) / 180) * 1.2 + 90);
+
   useEffect(() => () => {
     alive.current = false;
     stopFx();
@@ -203,15 +286,29 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
   }
 
   const sectorLabels = (slices, radius, colorOf) =>
-    [...slices].map(([s, { mid }]) => (
-      <text key={s} x={C + Math.cos(mid) * radius} y={C + Math.sin(mid) * radius} className="gx-sector" fill={colorOf?.(s)} textAnchor="middle" dominantBaseline="middle">
-        {s.toUpperCase()}
-      </text>
-    ));
+    [...slices].map(([s, { mid }]) => {
+      const q = proj(C + Math.cos(mid) * radius, C + Math.sin(mid) * radius);
+      return (
+        <text
+          key={s}
+          x={q.x}
+          y={q.y}
+          className="gx-sector"
+          fill={colorOf?.(s)}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          style={{ fontSize: `${15 * q.s}px`, opacity: Math.max(0.35, Math.min(1, 0.4 + (q.s - 0.8) * 1.4)) }}
+        >
+          {s.toUpperCase()}
+        </text>
+      );
+    });
   const sectorLines = (slices, [r0, r1]) =>
-    [...slices].map(([s, { start: a }]) => (
-      <line key={s} x1={C + Math.cos(a) * r0} y1={C + Math.sin(a) * r0} x2={C + Math.cos(a) * r1} y2={C + Math.sin(a) * r1} className="gx-divider" />
-    ));
+    [...slices].map(([s, { start: a }]) => {
+      const p0 = proj(C + Math.cos(a) * r0, C + Math.sin(a) * r0);
+      const p1 = proj(C + Math.cos(a) * r1, C + Math.sin(a) * r1);
+      return <line key={s} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} className="gx-divider" />;
+    });
 
   return (
     <div className="gx-wrap">
@@ -229,7 +326,7 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
           {data?.artist?.genres?.length > 0 && (
             <div className="gx-genres">
               {data.artist.genres.map((g) => (
-                <span key={g}>{g}</span>
+                <GenreChip key={g} tag={g} artist={name} songs={data.songs} />
               ))}
             </div>
           )}
@@ -278,7 +375,16 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
           {!data && <div className="gx-loading">Mapping {name}'s universe…</div>}
           {data?.error && <div className="status err gx-loading">{data.error}</div>}
           {data && !data.error && (
-            <svg viewBox="0 0 1000 1000" className="gx-svg" onClick={() => setSel(null)}>
+            <>
+            <svg
+              viewBox={`0 ${C - viewHalf} 1000 ${viewHalf * 2}`}
+              className={`gx-svg gx-3d ${cam.flat ? 'flat' : ''} ${drag.current?.moved ? 'grabbing' : ''}`}
+              onClick={tap(() => setSel(null))}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerLeave={onPointerUp}
+            >
               <defs>
                 <radialGradient id="gx-core">
                   <stop offset="0%" stopColor="rgba(30,215,96,.45)" />
@@ -292,91 +398,123 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
                 </clipPath>
               </defs>
 
-              {/* orbits */}
+              {/* orbits (drawn as rings on the tilted disc) */}
               {[...(L.song ? [L.song[0], (L.song[0] + L.song[1]) / 2, L.song[1]] : []), ...(L.artist ? [L.artist[0], L.artist[1]] : [])].map((r, i) => (
-                <circle key={i} cx={C} cy={C} r={r} className="gx-orbit" />
+                <path key={i} d={ringPath(r)} className="gx-orbit" />
               ))}
               {L.song && sectorLines(songSlices, [L.song[0] - 20, L.song[1] + 10])}
               {L.artist && sectorLines(artistSlices, [L.artist[0] - 20, L.artist[1] + 12])}
               {L.song && sectorLabels(songSlices, L.songLabel, (m) => MOOD_COLOR[m])}
               {L.artist && sectorLabels(artistSlices, L.artistLabel)}
 
-              {/* the artist */}
-              <circle cx={C} cy={C} r="120" fill="url(#gx-core)" className="gx-pulse" />
-              <g className="gx-center" onClick={(e) => (e.stopPropagation(), setSel(null))}>
-                <circle cx={C} cy={C} r="68" className="gx-center-ring" />
-                {data.artist.image ? (
-                  <image href={data.artist.image} x={C - 62} y={C - 62} width="124" height="124" clipPath="url(#gx-clip-c)" preserveAspectRatio="xMidYMid slice" />
-                ) : (
-                  <circle cx={C} cy={C} r="62" fill="#0b1a12" />
-                )}
-              </g>
-
-              {/* similar artists */}
-              {artists.map((a) => {
-                const p = artistPos.get(a);
-                if (!p) return null;
-                const on = sel?.item === a;
-                const size = 16 + a.similarity * 10;
+              {(() => {
+                // every dot, projected and sorted back-to-front (far dots behind the artist)
+                const nodes = [];
+                for (const a of artists) {
+                  const p0 = artistPos.get(a);
+                  if (p0) nodes.push({ kind: 'artist', item: a, p: proj(p0.x, p0.y), pending: false });
+                }
+                for (const so of songs) {
+                  const p0 = songPos.get(so);
+                  if (p0) nodes.push({ kind: 'song', item: so, p: proj(p0.x, p0.y), pending: p0.pending });
+                }
+                nodes.sort((x, y) => x.p.z - y.p.z);
+                const depth = (p) => (cam.flat ? 1 : Math.max(0.45, Math.min(1, 0.55 + (p.s - 0.85) * 1.5)));
+                const showLabels = !hover;
+                const draw = (n) => {
+                  const { p } = n;
+                  if (n.kind === 'artist') {
+                    const a = n.item;
+                    const on = sel?.item === a;
+                    const size = 16 + a.similarity * 10;
+                    return (
+                      <g
+                        key={`a|${a.mbid || a.name}`}
+                        className={`gx-n artist ${on ? 'on' : ''} ${hover === a ? 'hov' : ''} ${filtering ? 'dim' : ''}`}
+                        style={{ transform: `translate(${p.x}px, ${p.y}px) scale(${p.s})`, '--d': depth(p) }}
+                        onClick={tap(() => setSel({ type: 'artist', item: a }))}
+                        onMouseEnter={() => setHover(a)}
+                        onMouseLeave={() => setHover(null)}
+                      >
+                        <line x1="0" y1="0" x2={(C - p.x) / p.s} y2={(C - p.y) / p.s} className="gx-tether" />
+                        <circle r={size + 4} className="gx-ring dashed" />
+                        {a.topSong?.cover ? (
+                          <image href={a.topSong.cover} x={-size} y={-size} width={size * 2} height={size * 2} clipPath="url(#gx-node)" preserveAspectRatio="xMidYMid slice" />
+                        ) : (
+                          <circle r={size} fill="#132a1d" />
+                        )}
+                        {(on || (showLabels && labelledArtists.has(a.name) && p.s > 0.97)) && (
+                          <text y={size + 18} textAnchor="middle" className="gx-label">
+                            {a.name}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }
+                  const so = n.item;
+                  const mood = so.a?.vibe?.mood;
+                  const on = sel?.type === 'song' && sel.item.title === so.title;
+                  const size = 12 + so.popularity * 12;
+                  const match = songMatch(so);
+                  const playing = fx.id === `song|${so.title}` && fx.playing;
+                  return (
+                    <g
+                      key={`s|${so.title}|${so.album || ''}`}
+                      className={`gx-n song ${on ? 'on' : ''} ${hover === so ? 'hov' : ''} ${n.pending ? 'pending' : ''} ${filtering && !match ? 'dim' : ''} ${playing ? 'playing' : ''}`}
+                      style={{ transform: `translate(${p.x}px, ${p.y}px) scale(${p.s})`, '--c': mood ? MOOD_COLOR[mood] : '#4b6a5a', '--d': depth(p) }}
+                      onClick={tap(() => setSel({ type: 'song', item: so }))}
+                      onDoubleClick={tap(() => playFx(`song|${so.title}`, so.preview))}
+                      onMouseEnter={() => setHover(so)}
+                      onMouseLeave={() => setHover(null)}
+                    >
+                      <circle r={size + 5} className="gx-ring" />
+                      {so.cover ? (
+                        <image href={so.cover} x={-size} y={-size} width={size * 2} height={size * 2} clipPath="url(#gx-node)" preserveAspectRatio="xMidYMid slice" />
+                      ) : (
+                        <circle r={size} fill="#132a1d" />
+                      )}
+                      {(on || (showLabels && labelled.has(so.title) && p.s > 0.97)) && (
+                        <text y={size + 17} textAnchor="middle" className="gx-label song">
+                          {so.title.length > 22 ? `${so.title.slice(0, 21)}…` : so.title}
+                        </text>
+                      )}
+                    </g>
+                  );
+                };
+                const behind = nodes.filter((n) => n.p.z < 0);
+                const front = nodes.filter((n) => n.p.z >= 0);
+                const hov = nodes.find((n) => n.item === hover);
                 return (
-                  <g
-                    key={a.mbid || a.name}
-                    className={`gx-n artist ${on ? 'on' : ''} ${filtering ? 'dim' : ''}`}
-                    style={{ transform: `translate(${p.x}px, ${p.y}px)` }}
-                    onClick={(e) => (e.stopPropagation(), setSel({ type: 'artist', item: a }))}
-                    onMouseEnter={() => setHover(a)}
-                    onMouseLeave={() => setHover(null)}
-                  >
-                    <line x1="0" y1="0" x2={C - p.x} y2={C - p.y} className="gx-tether" />
-                    <circle r={size + 4} className="gx-ring dashed" />
-                    {a.topSong?.cover ? (
-                      <image href={a.topSong.cover} x={-size} y={-size} width={size * 2} height={size * 2} clipPath="url(#gx-node)" preserveAspectRatio="xMidYMid slice" />
-                    ) : (
-                      <circle r={size} fill="#132a1d" />
-                    )}
-                    {(on || hover === a || labelledArtists.has(a.name)) && (
-                      <text y={size + 18} textAnchor="middle" className="gx-label">
-                        {a.name}
-                      </text>
-                    )}
-                  </g>
+                  <>
+                    {behind.map(draw)}
+                    {/* the artist */}
+                    <circle cx={C} cy={C} r="120" fill="url(#gx-core)" className="gx-pulse" />
+                    <g className="gx-center" onClick={tap(() => setSel(null))}>
+                      <circle cx={C} cy={C} r="68" className="gx-center-ring" />
+                      {data.artist.image ? (
+                        <image href={data.artist.image} x={C - 62} y={C - 62} width="124" height="124" clipPath="url(#gx-clip-c)" preserveAspectRatio="xMidYMid slice" />
+                      ) : (
+                        <circle cx={C} cy={C} r="62" fill="#0b1a12" />
+                      )}
+                    </g>
+                    {front.map(draw)}
+                    {hov && <HoverCard n={hov} />}
+                  </>
                 );
-              })}
-
-              {/* songs */}
-              {songs.map((s) => {
-                const p = songPos.get(s);
-                if (!p) return null;
-                const mood = s.a?.vibe?.mood;
-                const on = sel?.type === 'song' && sel.item.title === s.title;
-                const size = 12 + s.popularity * 12;
-                const match = songMatch(s);
-                const playing = fx.id === `song|${s.title}` && fx.playing;
-                return (
-                  <g
-                    key={`${s.title}|${s.album || ''}`}
-                    className={`gx-n song ${on ? 'on' : ''} ${p.pending ? 'pending' : ''} ${filtering && !match ? 'dim' : ''} ${playing ? 'playing' : ''}`}
-                    style={{ transform: `translate(${p.x}px, ${p.y}px)`, '--c': mood ? MOOD_COLOR[mood] : '#4b6a5a' }}
-                    onClick={(e) => (e.stopPropagation(), setSel({ type: 'song', item: s }))}
-                    onDoubleClick={(e) => (e.stopPropagation(), playFx(`song|${s.title}`, s.preview))}
-                    onMouseEnter={() => setHover(s)}
-                    onMouseLeave={() => setHover(null)}
-                  >
-                    <circle r={size + 5} className="gx-ring" />
-                    {s.cover ? (
-                      <image href={s.cover} x={-size} y={-size} width={size * 2} height={size * 2} clipPath="url(#gx-node)" preserveAspectRatio="xMidYMid slice" />
-                    ) : (
-                      <circle r={size} fill="#132a1d" />
-                    )}
-                    {(on || hover === s || labelled.has(s.title)) && (
-                      <text y={size + 17} textAnchor="middle" className="gx-label song">
-                        {s.title.length > 22 ? `${s.title.slice(0, 21)}…` : s.title}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
+              })()}
             </svg>
+            <div className="gx-cam">
+              <button className={`gx-fxbtn ${!cam.flat ? 'on' : ''}`} onClick={() => setCam((c) => ({ ...c, flat: !c.flat }))} title="3D view or flat map">
+                {cam.flat ? '◎ Flat' : '◉ 3D'}
+              </button>
+              {!cam.flat && (
+                <button className={`gx-fxbtn ${autoSpin ? 'on' : ''}`} onClick={() => setAutoSpin((v) => !v)} title="Slowly turn the galaxy">
+                  ⟳ {autoSpin ? 'Spinning' : 'Spin'}
+                </button>
+              )}
+              {!cam.flat && <span className="muted">Drag to turn and tilt</span>}
+            </div>
+            </>
           )}
         </div>
 
@@ -437,7 +575,7 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
               </div>
               <div className="gx-genres">
                 {sel.item.genres.map((g) => (
-                  <span key={g}>{g}</span>
+                  <GenreChip key={g} tag={g} artist={sel.item.name} />
                 ))}
               </div>
               {sel.item.topSong && (
@@ -611,3 +749,53 @@ function SongCard({ s, fx, queued, onQueue, onMixLab }) {
   );
 }
 
+
+// The dot you hover: bigger, with a few details next to it
+function HoverCard({ n }) {
+  const { p, item, kind } = n;
+  const song = kind === 'song';
+  const base = song ? 12 + item.popularity * 12 : 16 + item.similarity * 10;
+  const R = Math.max(40, base * p.s * 1.9);
+  const right = p.x < 620;
+  const W = 260;
+  const H = 108;
+  const cx = right ? R + 14 : -R - 14 - W;
+  const cover = song ? item.cover : item.topSong?.cover;
+  const a = song ? item.a : null;
+  const mood = a?.vibe?.mood;
+  const color = song ? (mood ? MOOD_COLOR[mood] : '#7dffb6') : '#1ed760';
+  const cut = (t, n2) => (t && t.length > n2 ? `${t.slice(0, n2 - 1)}…` : t || '');
+  const lines = song
+    ? [
+        cut([item.album, item.year].filter(Boolean).join(' · ') || item.artist, 34),
+        item.plays > 0 ? `${fmt(item.plays)} plays · ${fmt(item.listeners || 0)} listeners` : 'Not much open play data',
+        a ? [a.bpm && `${Math.round(a.bpm)} BPM`, a.key?.camelot, mood].filter(Boolean).join(' · ') : item.preview ? 'Measuring tempo and key…' : 'No preview to measure',
+      ]
+    : [
+        `${Math.round(item.similarity * 100)}% fan overlap`,
+        cut((item.genres || []).slice(0, 2).join(' · ') || 'Similar artist', 34),
+        item.topSong ? cut(`Biggest: ${item.topSong.title}`, 34) : '',
+      ];
+  return (
+    <g className="gx-hover" style={{ transform: `translate(${p.x}px, ${p.y}px)` }}>
+      <circle r={R + 10} fill={color} opacity=".12" />
+      <circle r={R + 4} fill="none" stroke={color} strokeWidth="3" />
+      {cover ? (
+        <image href={cover} x={-R} y={-R} width={R * 2} height={R * 2} clipPath="url(#gx-node)" preserveAspectRatio="xMidYMid slice" />
+      ) : (
+        <circle r={R} fill="#132a1d" />
+      )}
+      <g transform={`translate(${cx}, ${-H / 2})`}>
+        <rect width={W} height={H} rx="14" className="gx-hcard" stroke={color} />
+        <text x="14" y="26" className="gx-h-title">
+          {cut(song ? item.title : item.name, 24)}
+        </text>
+        {lines.map((l, i) => (
+          <text key={i} x="14" y={48 + i * 19} className={`gx-h-line ${i === 2 ? 'strong' : ''}`} fill={i === 2 ? color : undefined}>
+            {l}
+          </text>
+        ))}
+      </g>
+    </g>
+  );
+}
