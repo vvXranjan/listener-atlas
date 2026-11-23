@@ -6,8 +6,8 @@ import { fetchT as fetch } from './http.mjs';
 
 const ARTIST_ALGO = 'session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30';
 
-async function getJson(url) {
-  const r = await fetch(url);
+async function getJson(url, opts) {
+  const r = await fetch(url, opts);
   if (!r.ok) throw new Error(`${new URL(url).host} ${r.status}`);
   return r.json();
 }
@@ -58,6 +58,48 @@ export async function itunesArtistSongs(name) {
   return map;
 }
 
+const LB = 'https://api.listenbrainz.org/1';
+export const MAX_SONGS = 36;
+
+// An artist's most played songs.
+// ListenBrainz's "top recordings" now needs a (free) token; without one we use their open
+// artist radio, which also returns the artist's songs with listen counts.
+export async function topRecordings(mbid, { env = process.env, take = 75 } = {}) {
+  const token = env?.LISTENBRAINZ_TOKEN;
+  if (token) {
+    const j = await getJson(`${LB}/popularity/top-recordings-for-artist/${mbid}`, { headers: { Authorization: `Token ${token}` } }).catch(() => null);
+    if (Array.isArray(j) && j.length) return j.slice(0, take);
+  }
+  const radio = await getJson(
+    `${LB}/lb-radio/artist/${mbid}?mode=easy&max_similar_artists=0&max_recordings_per_artist=100&pop_begin=0&pop_end=100`
+  ).catch(() => null);
+  const list = (radio?.[mbid] || Object.values(radio || {})[0] || [])
+    .filter((r) => r?.recording_mbid)
+    .sort((a, b) => (b.total_listen_count || 0) - (a.total_listen_count || 0))
+    .slice(0, take);
+  if (!list.length) return [];
+  const parts = [];
+  for (let i = 0; i < list.length; i += 25) parts.push(list.slice(i, i + 25).map((r) => r.recording_mbid));
+  const metas = await Promise.all(parts.map((ids) => getJson(`${LB}/metadata/recording/?recording_mbids=${ids.join(',')}&inc=artist%20release`).catch(() => ({}))));
+  const meta = Object.assign({}, ...metas);
+  return list
+    .map((r) => {
+      const m = meta[r.recording_mbid];
+      if (!m?.recording?.name) return null;
+      return {
+        recording_mbid: r.recording_mbid,
+        recording_name: m.recording.name,
+        artist_name: m.artist?.name || r.similar_artist_name,
+        release_name: m.release?.name || null,
+        caa_release_mbid: m.release?.caa_release_mbid || null,
+        caa_id: m.release?.caa_id || null,
+        total_listen_count: r.total_listen_count || 0,
+        total_user_count: 0,
+      };
+    })
+    .filter(Boolean);
+}
+
 const galaxyCache = new Map();
 
 // Who is this artist in the open databases? MusicBrainz search first; if it's busy,
@@ -87,7 +129,7 @@ async function buildGalaxy(name) {
     const itunes = await itunesArtistSongs(name);
     const mbid = await findArtistId(name, itunes);
     const [tops, sims, info] = await Promise.all([
-      mbid ? getJson(`https://api.listenbrainz.org/1/popularity/top-recordings-for-artist/${mbid}`).catch(() => []) : [],
+      mbid ? topRecordings(mbid).catch(() => []) : [],
       mbid
         ? getJson(`https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=${mbid}&algorithm=${ARTIST_ALGO}`).catch(() => [])
         : [],
@@ -113,10 +155,10 @@ async function buildGalaxy(name) {
         plays: rec.total_listen_count || 0,
         listeners: rec.total_user_count || 0,
       });
-      if (songs.length >= 24) break;
+      if (songs.length >= MAX_SONGS) break;
     }
     // no open listening data (new artist)? use the iTunes catalogue instead
-    if (songs.length < 6) {
+    if (songs.length < 12) {
       for (const [k, t] of itunes) {
         if (seen.has(k)) continue;
         seen.add(k);
@@ -131,7 +173,7 @@ async function buildGalaxy(name) {
           plays: 0,
           listeners: 0,
         });
-        if (songs.length >= 18) break;
+        if (songs.length >= MAX_SONGS) break;
       }
     }
     const maxPlays = Math.max(1, ...songs.map((s) => s.plays));
@@ -144,7 +186,7 @@ async function buildGalaxy(name) {
       artistGenres([mbid, ...simList.map((a) => a.artist_mbid)].filter(Boolean)).catch(() => ({})),
       Promise.all(
         simList.map((a) =>
-          getJson(`https://api.listenbrainz.org/1/popularity/top-recordings-for-artist/${a.artist_mbid}`)
+          topRecordings(a.artist_mbid, { take: 1 })
             .then((r) => (Array.isArray(r) ? r[0] : null))
             .catch(() => null)
         )

@@ -23,6 +23,7 @@ import { setNow } from './nowStore.js';
 import { playHere, useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
 import { everyWhileVisible } from './visibility.js';
 import ArtistLink from './ArtistLink.jsx';
+import { openLyrics } from './LyricsView.jsx';
 
 const POLL_MS = 5000;
 const mmss = (ms) => {
@@ -241,6 +242,9 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
             </button>
             <button className="btn-ghost sm" onClick={() => onShowOnGlobe(tr)}>
               Show on globe
+            </button>
+            <button className="btn-ghost sm" onClick={openLyrics}>
+              🎤 Lyrics
             </button>
             <button className="btn-ghost sm" onClick={onLibrary}>
               ♥ Library

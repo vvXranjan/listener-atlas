@@ -5,6 +5,7 @@ import { canQueue, isLoggedIn, queueSong } from './spotify.js';
 import { mixOnSpotify } from './spotifyPlayer.js';
 import ArtistLink from './ArtistLink.jsx';
 import { GenreChip } from './GenreView.jsx';
+import { openAlbums } from './AlbumsView.jsx';
 
 // Artist Galaxy: the artist in the center, their songs on the inner orbit
 // (grouped by mood), similar artists on the outer orbit (grouped by genre).
@@ -342,6 +343,9 @@ export default function ArtistGalaxy({ name: startName, onClose, onMixLab }) {
             </button>
           ))}
         </div>
+        <button className="gx-albums-btn" onClick={() => openAlbums({ artist: name })} title={`${name}'s albums, EPs and singles`}>
+          💿 Albums
+        </button>
         <button className="x gx-x" onClick={onClose} aria-label="Close">
           ×
         </button>

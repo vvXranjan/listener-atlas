@@ -341,6 +341,20 @@ export const setDeviceVolume = (pct, deviceId) =>
   api(`/me/player/volume?volume_percent=${Math.round(Math.max(0, Math.min(100, pct)))}${deviceId ? `&device_id=${deviceId}` : ''}`, { method: 'PUT' });
 export const playUris = (uris, { deviceId, positionMs = 0 } = {}) =>
   api(`/me/player/play${devQs(deviceId)}`, { method: 'PUT', body: { uris, position_ms: positionMs } });
+// Play a whole album (or start at one of its tracks)
+export async function findAlbumUri(title, artist) {
+  const main = String(artist || '').split(/,|&| with /)[0].trim();
+  let j = await api(`/search?type=album&limit=3&q=${encodeURIComponent(`album:${title} artist:${main}`)}`);
+  let item = j?.albums?.items?.[0];
+  if (!item) {
+    j = await api(`/search?type=album&limit=3&q=${encodeURIComponent(`${title} ${main}`)}`);
+    item = j?.albums?.items?.[0];
+  }
+  if (!item) throw new Error('This album isn\'t on Spotify');
+  return item.uri;
+}
+export const playContext = (contextUri, { deviceId, offset } = {}) =>
+  api(`/me/player/play${devQs(deviceId)}`, { method: 'PUT', body: { context_uri: contextUri, ...(offset != null ? { offset: { position: offset } } : {}) } });
 export const transferTo = (deviceId, play = true) => api('/me/player', { method: 'PUT', body: { device_ids: [deviceId], play } });
 
 // Find a song on Spotify and add it to your queue (Premium)

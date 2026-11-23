@@ -29,6 +29,8 @@ const CACHE = {
   preview: 'public, s-maxage=86400',
   galaxy: 'public, s-maxage=21600',
   genre: 'public, s-maxage=21600',
+  music: 'public, s-maxage=3600',
+  lyrics: 'public, s-maxage=86400',
   habits: 'private, no-store', // personal: never cached
 };
 

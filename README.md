@@ -167,6 +167,18 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
 
 > Spotify plays one song at a time per account, so transitions are smooth fades, not overlaps. For true overlap, turn on *Crossfade songs* in the Spotify app (Settings → Playback).
 
+### Lyrics
+
+**🎤 Lyrics** (Now Playing card and the mini player) opens the words of the song playing on your Spotify, **in time with the music**, Spotify-style: the current line in white, sung lines faded, the background coloured from the cover. Click a line to jump there. If the words run early or late, nudge them with **− / +**. Lyrics come from LRCLIB (lrclib.net), a free community library, through `/api/lyrics`; nothing is stored. Some songs only have unsynced lyrics, and some have none yet.
+
+### Search and albums
+
+- **One search box for everything**: type a song, artist, album or city. You get a **top result** (press Enter to open it), then artists (🌍 show on the map · 🌌 Galaxy · 💿 albums), songs (▶ preview, ▶ play on Spotify, ⇄ Mix Lab, + Set), albums and cities.
+- Song ranking: Spotify's own search when you're connected, then Deezer's popularity ranking, then Apple. Slowed / cover / karaoke versions go last unless you type those words.
+- **💿 Albums** (in every Artist Galaxy and in search): albums, EPs and singles, newest first, with filters. Open one to see its songs, **▶ Play on Spotify** or **+ Add all to my set**.
+
+Data: Apple Music catalogue (`/api/music?q=`, `?artist=`, `?album=`); with Spotify connected, song results use Spotify's ranking too.
+
 ### Genres
 
 Every genre chip in the Artist Galaxy (e.g. Future → *southern hip hop*) is clickable. It opens a genre page with:
@@ -291,6 +303,7 @@ Put these in `.env` locally, or in your host's environment settings. **Never com
 | `APIFY_TOKEN` | Optional | Fetch fresh Spotify listener numbers and look up new artists |
 | `VITE_SPOTIFY_CLIENT_ID` | Optional | Your Spotify app's Client ID (or paste it in the app) |
 | `REFRESH_HOURS` | Optional | How often the dev server refreshes numbers (default 24) |
+| `LISTENBRAINZ_TOKEN` | Optional | Free token from listenbrainz.org → Settings. Lets the Artist Galaxy use ListenBrainz's exact "top songs" list; without it the app uses their open artist radio (same listen counts, slightly less complete) |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Optional | Cloud database for your habits (added automatically when you connect Upstash Redis in Vercel; `UPSTASH_REDIS_REST_URL` / `_TOKEN` also work) |
 | `ANTHROPIC_API_KEY` | Optional | Lets Claude re-rank Mix Lab picks; works fine without |
 | `ANTHROPIC_MODEL` | Optional | Model for the above (default `claude-haiku-5-5`) |
@@ -364,7 +377,7 @@ tests/                    Vitest tests
 
 ## Tests
 
-Run the 94 tests:
+Run the 101 tests:
 
 ```bash
 npm test

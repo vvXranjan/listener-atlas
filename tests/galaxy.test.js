@@ -25,13 +25,24 @@ describe('Artist Galaxy data', () => {
       vi.fn((url) => {
         const u = String(url);
         if (u.includes('musicbrainz.org/ws/2/artist')) return ok({ artists: [{ id: 'fut', name: 'Future', score: 100 }] });
-        if (u.includes('top-recordings-for-artist/fut'))
-          return ok([
-            { recording_name: 'Mask Off', artist_name: 'Future', total_listen_count: 900 },
-            { recording_name: 'Mask Off (Remix)', artist_name: 'Future', total_listen_count: 100 },
-            { recording_name: 'Low Life', artist_name: 'Future feat. The Weeknd', total_listen_count: 450 },
-          ]);
-        if (u.includes('top-recordings-for-artist/trav')) return ok([{ recording_name: 'SICKO MODE', artist_name: 'Travis Scott' }]);
+        // "top recordings" needs a token now: the open artist radio + metadata is used instead
+        if (u.includes('top-recordings-for-artist')) return Promise.resolve(Response.json({ code: 401 }, { status: 401 }));
+        if (u.includes('/lb-radio/artist/fut'))
+          return ok({
+            fut: [
+              { recording_mbid: 'r2', total_listen_count: 100 },
+              { recording_mbid: 'r1', total_listen_count: 900 },
+              { recording_mbid: 'r3', total_listen_count: 450 },
+            ],
+          });
+        if (u.includes('/lb-radio/artist/trav')) return ok({ trav: [{ recording_mbid: 't1', total_listen_count: 5 }] });
+        if (u.includes('/metadata/recording/'))
+          return ok({
+            r1: { recording: { name: 'Mask Off' }, artist: { name: 'Future' } },
+            r2: { recording: { name: 'Mask Off (Remix)' }, artist: { name: 'Future' } },
+            r3: { recording: { name: 'Low Life' }, artist: { name: 'Future feat. The Weeknd' } },
+            t1: { recording: { name: 'SICKO MODE' }, artist: { name: 'Travis Scott' } },
+          });
         if (u.includes('similar-artists')) return ok([{ name: 'Travis Scott', artist_mbid: 'trav', score: 50 }]);
         if (u.includes('/metadata/artist/'))
           return ok([

@@ -23,7 +23,7 @@ const artistCache = new Map();
 
 export const ROUTES = [
   'live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights', 'recommend',
-  'song-search', 'preview', 'audio', 'galaxy', 'habits', 'genre',
+  'song-search', 'preview', 'audio', 'galaxy', 'habits', 'genre', 'music', 'lyrics',
 ];
 
 // Only Apple's preview servers may be proxied (stops the proxy being used for anything else)
@@ -122,6 +122,20 @@ export async function handle({ route, method = 'GET', query = {}, body = null, h
         if (!q('name')) return json(400, { error: 'name is required' });
         const { artistGalaxy } = await import('./galaxy.mjs');
         return json(200, await artistGalaxy(q('name')));
+      }
+
+      case 'lyrics': {
+        if (!q('title') || !q('artist')) return json(400, { error: 'title and artist are required' });
+        const { getLyrics } = await import('./lyrics.mjs');
+        return json(200, await getLyrics({ title: q('title'), artist: q('artist'), album: q('album'), durationMs: q('durationMs') }));
+      }
+
+      case 'music': {
+        const m = await import('./music.mjs');
+        if (q('album')) return json(200, await m.albumTracks(q('album')));
+        if (q('artist')) return json(200, await m.artistAlbums(q('artist')));
+        if (q('q').trim().length < 2) return json(400, { error: 'Type at least 2 letters' });
+        return json(200, await m.searchMusic(q('q')));
       }
 
       case 'genre': {

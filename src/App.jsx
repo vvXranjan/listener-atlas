@@ -4,7 +4,6 @@ import { MapLibreOverlay } from '@deck.gl/maplibre';
 import { GlobeBars, MapLabels, HoverTip, fmt } from './GlobeLayers.jsx';
 import { attachPerf, usePerf, setPerfMode, getQuality, pixelRatioFor } from './perf.js';
 import { useLiveData, timeAgo } from './useLiveData.js';
-import CitySearch from './CitySearch.jsx';
 import CityCard from './CityCard.jsx';
 import ArtistDrawer from './ArtistDrawer.jsx';
 import Starfield from './Starfield.jsx';
@@ -18,16 +17,17 @@ import Safe from './Safe.jsx';
 const MixLab = lazy(() => import('./MixLab.jsx'));
 const ArtistGalaxy = lazy(() => import('./ArtistGalaxy.jsx'));
 const GenreView = lazy(() => import('./GenreView.jsx'));
+const AlbumsView = lazy(() => import('./AlbumsView.jsx'));
+const LyricsView = lazy(() => import('./LyricsView.jsx'));
+const MusicSearch = lazy(() => import('./MusicSearch.jsx'));
 const Library = lazy(() => import('./Library.jsx'));
 const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
 import { useNowItem } from './mixParts.jsx';
 import { startSetSync } from './setSync.js';
 import { startHabits } from './habits.js';
-import { getArtistCities, toStates, SAMPLE_ARTISTS } from './data.js';
 import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
 
-const CITY_ZOOM = 5.8; // demo mode: zoom past this for city bars
 const GLOBE_ZOOM = 2.6; // below this we are "in space"
 const ALL = 'ALL';
 const SERVER_HINT =
@@ -94,25 +94,23 @@ export default function App() {
   const inViewFn = useRef(() => {});
   const firstStyle = useRef(true);
 
-  const [mode, setMode] = useState('live'); // 'live' | 'demo'
+  const mode = 'live'; // real data only
   const [extras, setExtras] = useState(loadExtras);
   const [selected, setSelected] = useState(ALL);
-  const [demoArtist, setDemoArtist] = useState('Arijit Singh');
-  const [demoCities, setDemoCities] = useState([]);
-  const [input, setInput] = useState('');
   const [status, setStatus] = useState(null);
   const [zoom, setZoom] = useState(1.6);
   const [styleKey, setStyleKey] = useState('satellite');
   const [spin, setSpin] = useState(true);
   const [autopilot, setAutopilot] = useState(false);
   const [inView, setInView] = useState(null);
-  const [searchMode, setSearchMode] = useState('artist'); // 'artist' | 'city'
   const [city, setCity] = useState(null); // { name, loading, error, data }
   const [cityMoves, setCityMoves] = useState({});
   const [drawer, setDrawer] = useState(null);
   const [song, setSong] = useState(null); // song drawer
   const [mixLab, setMixLab] = useState(null); // Mix Lab: { track } or null
   const [galaxy, setGalaxy] = useState(null); // artist name shown in the Artist Galaxy
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [albums, setAlbums] = useState(null); // { artist } or { albumId } shown in the albums page
   const [genre, setGenre] = useState(null); // { tag, artist, songs } shown in the genre page
   const [library, setLibrary] = useState(false); // your Spotify library popup
   const [nowTrack, setNowTrack] = useState(null); // what's playing on your Spotify
@@ -290,24 +288,10 @@ export default function App() {
     mapRef.current?.setStyle(STYLES[styleKey]);
   }, [styleKey]);
 
-  // ---------- demo data ----------
-  useEffect(() => {
-    getArtistCities(demoArtist).then((cs) => setDemoCities(cs.map((c) => ({ ...c, country: 'IN' }))));
-  }, [demoArtist]);
-
   // ---------- points on the map ----------
-  const showDemoCities = zoom >= CITY_ZOOM;
-  const points = useMemo(() => {
-    if (mode === 'live') return buildLivePoints(artists, selected);
-    return showDemoCities
-      ? demoCities
-      : toStates(demoCities).map((s) => ({ ...s, country: 'IN', city: null }));
-  }, [mode, artists, selected, demoCities, showDemoCities]);
+  const points = useMemo(() => buildLivePoints(artists, selected), [artists, selected]);
 
-  const groups = useMemo(
-    () => groupByCountry(mode === 'live' ? points : demoCities),
-    [points, demoCities, mode]
-  );
+  const groups = useMemo(() => groupByCountry(points), [points]);
   groupsRef.current = groups;
 
   // re-check what's in view when data changes
@@ -321,17 +305,8 @@ export default function App() {
   const live = mode === 'live';
   const zb = Math.round(zoom * 4) / 4;
   const k = Math.pow(2, (4.4 - zb) * 0.85);
-  const kDemo = Math.min(4, Math.max(1, k));
-  const radius = live
-    ? Math.min(90000, Math.max(1500, 20000 * k))
-    : showDemoCities
-    ? 9000
-    : 26000 * kDemo;
-  const height = live
-    ? Math.min(3200000, Math.max(30000, 750000 * k))
-    : showDemoCities
-    ? 220000
-    : 700000 * kDemo;
+  const radius = Math.min(90000, Math.max(1500, 20000 * k));
+  const height = Math.min(3200000, Math.max(30000, 750000 * k));
   // ---------- city labels, chart pins, the open-city pin ----------
   const [chartPins, setChartPins] = useState([]); // where the song you're playing is charting
   const labelPoints = useMemo(
@@ -418,14 +393,21 @@ export default function App() {
     const on = (e) => {
       if (!e.detail) return;
       setGenre(null);
+      setAlbums(null);
       setGalaxy(e.detail);
     };
     const onGenre = (e) => e.detail?.tag && setGenre(e.detail);
+    const onAlbums = (e) => e.detail && setAlbums(e.detail);
+    const onLyrics = () => setLyricsOpen((v) => !v);
+    window.addEventListener('open-lyrics', onLyrics);
     window.addEventListener('open-galaxy', on);
     window.addEventListener('open-genre', onGenre);
+    window.addEventListener('open-albums', onAlbums);
     return () => {
       window.removeEventListener('open-galaxy', on);
       window.removeEventListener('open-genre', onGenre);
+      window.removeEventListener('open-albums', onAlbums);
+      window.removeEventListener('open-lyrics', onLyrics);
     };
   }, []);
 
@@ -579,7 +561,6 @@ export default function App() {
   // ---------- selecting / searching artists ----------
   function showArtistOnGlobe(a) {
     if (!a?.id) return;
-    setMode('live');
     setExtras((prev) => {
       if (liveData.artists.some((x) => x.id === a.id) || prev.some((x) => x.id === a.id)) return prev;
       const next = [...prev, a];
@@ -648,14 +629,9 @@ export default function App() {
     if (!pilotRef.current.on) frameGroups(gs);
   }
 
-  async function onSearch(e) {
-    e.preventDefault();
-    const q = input.trim();
+  // Put an artist on the globe (tracked ones instantly, others looked up live)
+  async function lookupArtist(q) {
     if (!q) return;
-    if (mode === 'demo') {
-      setDemoArtist(q);
-      return flyToPlace(PLACES[0]);
-    }
     const lc = q.toLowerCase();
     const hit =
       artists.find((a) => a.name.toLowerCase() === lc) ||
@@ -716,9 +692,7 @@ export default function App() {
   }, [view]);
 
   const headline =
-    mode === 'demo'
-      ? demoCities.reduce((a, c) => a + c.listeners, 0)
-      : selected === ALL
+    selected === ALL
       ? artists.reduce((a, x) => a + x.listeners, 0)
       : current?.listeners || 0;
 
@@ -752,14 +726,7 @@ export default function App() {
         <div className="brand">
           <div className={`dot ${live ? '' : 'demo'}`} />
           <h1>Listener Atlas</h1>
-          <div className="seg">
-            <button className={live ? 'on' : ''} onClick={() => setMode('live')}>
-              Live
-            </button>
-            <button className={!live ? 'on' : ''} onClick={() => setMode('demo')}>
-              Demo
-            </button>
-          </div>
+
         </div>
         <div className="sub muted">
           {live ? (
@@ -796,35 +763,16 @@ export default function App() {
           />
         )}
 
-        {live && (
-          <div className="seg wide">
-            <button className={searchMode === 'artist' ? 'on' : ''} onClick={() => setSearchMode('artist')}>
-              🎤 Artist
-            </button>
-            <button className={searchMode === 'city' ? 'on' : ''} onClick={() => setSearchMode('city')}>
-              🏙 City
-            </button>
-          </div>
-        )}
-
-        {live && searchMode === 'city' ? (
-          <CitySearch onPick={(c) => openCity(c)} loading={city?.loading} />
-        ) : (
-        <form onSubmit={onSearch}>
-          <input
-            list="artist-names"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={live ? 'Search any artist…' : 'Type an artist…'}
-          />
-          <datalist id="artist-names">
-            {(live ? artists.map((a) => a.name) : Object.keys(SAMPLE_ARTISTS)).map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-          <button disabled={status?.loading}>{status?.loading ? '…' : 'Go'}</button>
-        </form>
-        )}
+        {live ? (
+          <Safe name="Search" quiet>
+            <MusicSearch
+              tracked={artists}
+              onArtistMap={(name) => lookupArtist(name)}
+              onCity={(c) => openCity(c)}
+              onMixLab={(t) => setMixLab({ track: t })}
+            />
+          </Safe>
+        ) : null}
         {status && (
           <div className={`status ${status.error ? 'err' : ''} ${status.hint ? 'hint' : ''} ${status.loading ? 'loading' : ''}`}>
             {status.text}
@@ -838,9 +786,7 @@ export default function App() {
           <div>
             <div className="big">{fmt(headline)}</div>
             <div className="muted">
-              {mode === 'demo'
-                ? `monthly listeners in India · ${demoArtist}`
-                : selected === ALL
+              {selected === ALL
                 ? `combined monthly listeners · ${artists.length} artists`
                 : `monthly listeners · ${current?.name}${current?.worldRank ? ` · #${current.worldRank} worldwide` : ''}`}
             </div>
@@ -1110,6 +1056,28 @@ export default function App() {
             name={galaxy}
             onClose={() => setGalaxy(null)}
             onMixLab={(t) => {
+              setGalaxy(null);
+              setMixLab({ track: t });
+            }}
+          />
+        </Safe>
+      )}
+
+      {lyricsOpen && (
+        <Safe name="Lyrics" onClose={() => setLyricsOpen(false)}>
+          <LyricsView onClose={() => setLyricsOpen(false)} />
+        </Safe>
+      )}
+
+      {albums && (
+        <Safe name="Albums" onClose={() => setAlbums(null)}>
+          <AlbumsView
+            key={`${albums.artist}|${albums.albumId}`}
+            artist={albums.artist}
+            albumId={albums.albumId}
+            onClose={() => setAlbums(null)}
+            onMixLab={(t) => {
+              setAlbums(null);
               setGalaxy(null);
               setMixLab({ track: t });
             }}
