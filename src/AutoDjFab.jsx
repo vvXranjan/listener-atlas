@@ -21,19 +21,21 @@ export default function AutoDjFab({ onOpenSet }) {
   const on = dj.on;
   const m = modeInfo(mode);
 
-  // Auto-DJ is ON by default: as soon as you're connected and your set has songs, it gets ready
-  // (it never starts music by itself; it takes over when a song you play ends).
+  // Auto-DJ is ON by default, set or no set: as soon as you're connected it gets ready
+  // (it never starts music by itself; it takes over when the song you're playing ends,
+  // with your set first, then radio picks).
   const autoTried = useRef(false);
   const userOff = useRef(false);
   useEffect(() => {
-    if (on || autoTried.current || userOff.current || !count) return;
-    const t = setTimeout(() => {
+    if (on || autoTried.current || userOff.current) return;
+    const iv = setInterval(() => {
       if (autoTried.current || userOff.current || !isLoggedIn() || !canQueue()) return;
       autoTried.current = true;
+      clearInterval(iv);
       startAutoDj({ passive: true });
     }, 1500);
-    return () => clearTimeout(t);
-  }, [count, on]);
+    return () => clearInterval(iv);
+  }, [on]);
 
   function toggle() {
     if (on) {
@@ -44,15 +46,11 @@ export default function AutoDjFab({ onOpenSet }) {
       setHint('Connect Spotify first');
       return onOpenSet?.();
     }
-    if (!count) {
-      setHint('Add songs to your set first');
-      return onOpenSet?.();
-    }
-    startAutoDj({});
+    startAutoDj(count ? {} : { passive: true });
   }
 
   const left = dj.secondsLeft != null && !dj.mixing ? `${Math.floor(dj.secondsLeft / 60)}:${String(dj.secondsLeft % 60).padStart(2, '0')}` : '';
-  const sub = on ? (dj.mixing ? 'mixing…' : dj.paused ? 'paused' : dj.next ? `next: ${dj.next.title}` : 'last song') : `${m.icon} ${m.label} · ${count} song${count === 1 ? '' : 's'}`;
+  const sub = on ? (dj.mixing ? 'mixing…' : dj.paused ? 'paused' : dj.next ? `next: ${dj.next.title}` : 'listening along') : `${m.icon} ${m.label} · ${count} song${count === 1 ? '' : 's'}`;
 
   return (
     <div className={`dj-fab-wrap ${on ? 'on' : ''}`}>

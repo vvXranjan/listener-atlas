@@ -19,6 +19,7 @@ const ArtistGalaxy = lazy(() => import('./ArtistGalaxy.jsx'));
 const GenreView = lazy(() => import('./GenreView.jsx'));
 const AlbumsView = lazy(() => import('./AlbumsView.jsx'));
 const LyricsView = lazy(() => import('./LyricsView.jsx'));
+const AmbientLyrics = lazy(() => import('./AmbientLyrics.jsx'));
 const MusicSearch = lazy(() => import('./MusicSearch.jsx'));
 const Library = lazy(() => import('./Library.jsx'));
 const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
@@ -27,6 +28,7 @@ import { startSetSync } from './setSync.js';
 import { startHabits } from './habits.js';
 import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
+import { getNow } from './nowStore.js';
 
 const GLOBE_ZOOM = 2.6; // below this we are "in space"
 const ALL = 'ALL';
@@ -110,6 +112,7 @@ export default function App() {
   const [mixLab, setMixLab] = useState(null); // Mix Lab: { track } or null
   const [galaxy, setGalaxy] = useState(null); // artist name shown in the Artist Galaxy
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [ambient, setAmbient] = useState(false);
   const [albums, setAlbums] = useState(null); // { artist } or { albumId } shown in the albums page
   const [genre, setGenre] = useState(null); // { tag, artist, songs } shown in the genre page
   const [library, setLibrary] = useState(false); // your Spotify library popup
@@ -267,6 +270,8 @@ export default function App() {
     map.once('style.load', () => {
       setTimeout(spinGlobe, 300);
       setTimeout(() => {
+        // a song is playing and the globe follows your music: show that instead of touring
+        if (followRef.current && getNow().track) return;
         if (spinRef.current) startAutopilot();
       }, 4000);
     });
@@ -399,7 +404,12 @@ export default function App() {
     const onGenre = (e) => e.detail?.tag && setGenre(e.detail);
     const onAlbums = (e) => e.detail && setAlbums(e.detail);
     const onLyrics = () => setLyricsOpen((v) => !v);
+    const onAmbient = () => {
+      setLyricsOpen(false);
+      setAmbient(true);
+    };
     window.addEventListener('open-lyrics', onLyrics);
+    window.addEventListener('open-ambient', onAmbient);
     window.addEventListener('open-galaxy', on);
     window.addEventListener('open-genre', onGenre);
     window.addEventListener('open-albums', onAlbums);
@@ -408,6 +418,7 @@ export default function App() {
       window.removeEventListener('open-genre', onGenre);
       window.removeEventListener('open-albums', onAlbums);
       window.removeEventListener('open-lyrics', onLyrics);
+      window.removeEventListener('open-ambient', onAmbient);
     };
   }, []);
 
@@ -497,9 +508,10 @@ export default function App() {
   }
 
   // ---------- autopilot ----------
-  async function startAutopilot() {
+  async function startAutopilot(manual = false) {
     const token = ++pilotRef.current.token;
     pilotRef.current.on = true;
+    pilotRef.current.manual = manual; // you pressed it (keeps touring) vs. the intro tour
     setCity(null);
     spinRef.current = false;
     setSpin(false);
@@ -539,6 +551,7 @@ export default function App() {
   function stopAutopilot() {
     if (!pilotRef.current.on) return;
     pilotRef.current.on = false;
+    pilotRef.current.manual = false;
     pilotRef.current.token++;
     setAutopilot(false);
   }
@@ -547,7 +560,7 @@ export default function App() {
     if (pilotRef.current.on) {
       stopAutopilot();
       mapRef.current?.stop();
-    } else startAutopilot();
+    } else startAutopilot(true);
   }
 
   function toggleSpin() {
@@ -570,8 +583,9 @@ export default function App() {
       return next;
     });
     setSelected(a.id);
-    stopAutopilot();
-    frameGroups(groupByCountry(buildLivePoints([a], a.id)));
+    // a tour you started keeps going (now over this artist); otherwise fly to their listeners
+    if (!pilotRef.current.manual) stopAutopilot();
+    if (!pilotRef.current.on) frameGroups(groupByCountry(buildLivePoints([a], a.id)));
   }
 
   // find an artist we already have by name
@@ -734,7 +748,7 @@ export default function App() {
               <span className={`live-dot ${server.online ? '' : 'off'}`} />
               Spotify data · updated {timeAgo(liveData.updatedAt)}
               {server.online && <> · checked {timeAgo(checkedAt)}</>}
-              {server.online && !server.autoRefresh && <span className="warn"> · add token for auto-refresh</span>}
+              {import.meta.env.DEV && server.online && !server.autoRefresh && <span className="warn"> · add token for auto-refresh</span>}
               {server.online === false && <span className="warn"> · data server not running (run npm install, then npm run dev)</span>}
             </span>
           ) : (
@@ -754,7 +768,14 @@ export default function App() {
             onSongChange={(t) => {
               setNowTrack(t);
               setChartPins([]);
-              if (followRef.current) showSongOnGlobe(t);
+              if (followRef.current) {
+                // the intro tour gives way to your music; a tour you started keeps going (on this artist)
+                if (pilotRef.current.on && !pilotRef.current.manual) {
+                  stopAutopilot();
+                  mapRef.current?.stop();
+                }
+                showSongOnGlobe(t);
+              }
             }}
             onDetails={(t) => setSong(t)}
             onMixLab={(t) => setMixLab({ track: t })}
@@ -1060,6 +1081,12 @@ export default function App() {
               setMixLab({ track: t });
             }}
           />
+        </Safe>
+      )}
+
+      {ambient && (
+        <Safe name="Ambient lyrics" onClose={() => setAmbient(false)}>
+          <AmbientLyrics onClose={() => setAmbient(false)} />
         </Safe>
       )}
 

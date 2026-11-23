@@ -147,7 +147,9 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
   - **Stays on time in a background tab**: its clock runs in a Web Worker, which browsers don't slow down.
   - **Skips stray queue songs**: Spotify always plays its own queue first. If an old queued song starts right as your song ends, Auto-DJ skips it and plays your next set song (it shows "skipped N from queue").
   - **Never fights you**: pick a different song mid-way and Auto-DJ pauses; press **▶ Resume set** (or play a set song) to continue.
-  - **On by default**: when you're connected and your set has songs, Auto-DJ switches itself on in *ready* mode. It never starts music by itself; it takes over when the song you're playing ends. Turn it off with the **Auto-DJ ON/OFF** switch.
+  - **Always on**: as soon as you're connected, Auto-DJ switches itself on, even with an empty set (radio then picks what comes next). It never starts music by itself; it takes over when the song you're playing ends. Turn it off any time with the **Auto-DJ ON/OFF** switch.
+  - **Globe follows your music**: with *Follow my music on the globe* (on by default) the globe flies to the listeners of whatever you play; the intro tour gives way to your music. A tour you start yourself keeps going over the current artist.
+  - **In step with Spotify**: what's playing refreshes every 2.5 s, and right away when Auto-DJ or your phone changes the song, when you use the controls, or when you come back to the tab.
   - **Late adds still make it**: it checks your Spotify queue every 5 s mid-song, every 1 s in the last 25 s, and once more right at the switch. A song you queue even during the fade plays next, with no extra skip or restart.
   - **Light on Spotify**: what's playing is read every 2 s mid-song and every 1 s in the last 30 s (free with "⇣ Play here"), and every 3 s when nothing plays.
   - **Transition modes** (change them any time, even while it runs):
@@ -170,6 +172,10 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
 ### Lyrics
 
 **🎤 Lyrics** (Now Playing card and the mini player) opens the words of the song playing on your Spotify, **in time with the music**, Spotify-style: the current line in white, sung lines faded, the background coloured from the cover. Click a line to jump there. If the words run early or late, nudge them with **− / +**. Lyrics come from LRCLIB (lrclib.net), a free community library, through `/api/lyrics`; nothing is stored. Some songs only have unsynced lyrics, and some have none yet.
+
+### Scenes: full-screen lyrics over moving worlds
+
+**🌊 Scenes** (Now Playing card, or the lyrics panel) goes full screen: a moving scene with **only the line being sung**, big and centred, the next line faint below. Scenes are drawn live on your graphics card: **🌊 Ocean** (stormy sea under clouds), **☁️ Clouds**, **🌌 Aurora**, **✨ Stars** (flying through space), **🎨 Cover glow** (flowing colours from the album cover), **🏖️ Beach** (waves washing onto the sand), **🌅 Sunset** (golden sun path on the sea) and **🌠 Milky Way** (the galaxy turning over dark hills). Each new line gives a soft glow. Controls fade away after a few seconds; move the mouse to bring them back. **← / →** switch scenes, **⛶** goes truly full screen, **Esc** closes. Your last scene is remembered. Only songs with synced lyrics show words here.
 
 ### Search and albums
 
@@ -377,7 +383,7 @@ tests/                    Vitest tests
 
 ## Tests
 
-Run the 101 tests:
+Run the 102 tests:
 
 ```bash
 npm test

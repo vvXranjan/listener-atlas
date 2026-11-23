@@ -164,7 +164,12 @@ export async function currentlyPlaying() {
     logout();
     throw new Error('Spotify session expired — connect again');
   }
-  if (r.status === 403) throw new Error('Spotify refused access. Is your account added under "User Management" in your app?');
+  if (r.status === 403) {
+    // app is in Spotify's test mode and this account isn't on its list
+    const e = new Error("Spotify hasn't let this account in yet.");
+    e.notAllowed = true;
+    throw e;
+  }
   if (!r.ok) throw new Error(`Spotify error ${r.status}`);
   const j = await r.json();
   const it = j.item;

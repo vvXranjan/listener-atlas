@@ -259,5 +259,15 @@ describe('Auto-DJ stays in sync with your set and Spotify', () => {
     expect(plays()).toHaveLength(0);
     expect(autoDjState().on).toBe(true);
   });
+
+  it('always-on: starts with an empty set without stopping, and never starts music itself', async () => {
+    saveSet([]);
+    pb.isPlaying = false;
+    await startAutoDj({ passive: true });
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(autoDjState().on).toBe(true);
+    expect(autoDjState().error).toBe('');
+    expect(plays()).toHaveLength(0);
+  });
 });
 

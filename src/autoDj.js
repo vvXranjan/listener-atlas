@@ -3,6 +3,7 @@ import { currentPlayback, fadeVolume, ensureDevice } from './spotifyPlayer.js';
 import { findTrackUri, playUris, getQueue, nextTrack, seekTo } from './spotify.js';
 import { getSet, saveSet, songId, getPrefs } from './setStore.js';
 import { after } from './ticker.js';
+import { getNow, setNow } from './nowStore.js';
 import { analyzePreview, cachedAnalysis } from './audioAnalysis.js';
 import { planTransition, planText } from './djModes.js';
 
@@ -65,6 +66,8 @@ let prevCounts = new Map(); // how many times each uri was in Spotify's queue at
 let startOld = new Set(); // what was in Spotify's queue when Auto-DJ started
 let lastFront = new Set(); // songs at the front of the queue at the last look (your queued songs live here)
 let context = new Set(); // uris we gave Spotify as the play list
+// tell the app "Spotify just changed song", so it refreshes right away instead of at its next poll
+const spotifyChanged = () => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('spotify-changed'));
 let lastScanAt = 0; // last look at Spotify's queue
 let lastPb = null; // last answer from Spotify, and when
 let lastPbAt = 0;
@@ -90,6 +93,10 @@ async function readPlayback(force = false) {
   const pb = await currentPlayback().catch(() => null);
   lastPb = pb;
   lastPbAt = now;
+  // share what we just learned, so the whole app stays in step with Spotify
+  const n = getNow();
+  if (pb && n.track?.id && String(pb.uri || '').endsWith(n.track.id)) setNow({ progressMs: pb.positionMs, playing: !!pb.isPlaying, fetchedAt: now });
+  else if (pb && n.track?.id && pb.uri && !String(pb.uri).endsWith(n.track.id)) spotifyChanged();
   return pb;
 }
 let radioFor = null; // the song radio last found a follow-up for
@@ -164,7 +171,8 @@ export async function startAutoDj(options = {}) {
   opts = { ...opts, ...options };
   emit({ on: true, paused: false, error: '', status: 'Starting…', skipped: 0, queuedByYou: 0 });
   const set = getSet();
-  if (!set.length) return stopAutoDj('Add songs to your set first.', true);
+  // switched on by itself (always-on): an empty set is fine, radio picks the next songs
+  if (!set.length && !options.passive) return stopAutoDj('Add songs to your set first.', true);
   // whatever is in Spotify's queue right now is "old"
   const q = await getQueue().catch(() => null);
   prevCounts = countUris(q?.queue || []);
@@ -182,13 +190,22 @@ export async function startAutoDj(options = {}) {
     // let the current song play, then mix into your set near its end
     expected = { uri: pb.uri };
     baseVolume = pb.volume;
-    emit({ current: { title: pb.name, artist: pb.artist }, next: set[0], status: `Mixing into "${set[0].title}" near the end of "${pb.name}"` });
+    emit({
+      current: { title: pb.name, artist: pb.artist },
+      next: set[0] || null,
+      status: set[0] ? `Mixing into "${set[0].title}" near the end of "${pb.name}"` : `Listening along to "${pb.name}"`,
+    });
   } else if (pb?.isPlaying) {
     expected = { uri: pb.uri };
     baseVolume = pb.volume;
   } else if (options.passive) {
     // switched on by itself (app start): don't start music, just be ready
-    emit({ next: set[0], status: `Ready: play anything on Spotify and Auto-DJ takes over at the end of the song, or press "⇄ Mix to next now" to start your set` });
+    emit({
+      next: set[0] || null,
+      status: set[0]
+        ? `Ready: play anything on Spotify and Auto-DJ takes over at the end of the song, or press "⇄ Mix to next now" to start your set`
+        : 'Ready: play anything on Spotify and Auto-DJ keeps the music going',
+    });
   } else {
     await mixTo(set[0], { fadeOut: false });
   }
@@ -322,7 +339,7 @@ async function check(my) {
   if (st.paused) return;
   if (!next) {
     emit({ status: `Last song: "${pb.name}". Add more songs to keep going.` });
-    if (leftMs < 2500 && !pb.isPlaying) return stopAutoDj('Set finished. 🎧');
+    if (leftMs < 2500 && !pb.isPlaying && !opts.passive) return stopAutoDj('Set finished. 🎧');
     return;
   }
   let plan = planFor(playingSong(pb), next);
@@ -412,6 +429,7 @@ async function mixTo(song, { pb = null, fadeOut = true, fadeOutMs, plan } = {}) 
     // play the rest of your set as a list: if we're ever late, Spotify carries on in your order
     const deviceId = pb?.deviceId || (await ensureDevice());
     await playUris(uris, { deviceId, positionMs: plan.startAtMs || opts.skipIntroMs });
+    spotifyChanged();
     context = new Set(uris); // these are ours, not "queued by you"
     lastPb = null;
     lastPbAt = 0;
@@ -443,6 +461,7 @@ async function enterQueued(song, { pb, plan, low, vol, canFade, my }) {
     await playUris([song.uri, ...upcomingFrom(song).slice(1).map((s) => s.uri).filter(Boolean)], { deviceId: now.deviceId || pb.deviceId });
   }
   if (plan.startAtMs) await seekTo(plan.startAtMs, now?.deviceId || pb.deviceId).catch(() => {});
+  spotifyChanged();
   expected = { uri: song.uri };
   lastSeen = null;
   lastPb = null;

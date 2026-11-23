@@ -1,6 +1,6 @@
 import { it, expect, vi } from 'vitest';
 import { parseLrc, pickBest } from '../server/lyrics.mjs';
-import { lineAt } from '../src/LyricsView.jsx';
+import { lineAt } from '../src/lyricsCore.js';
 
 // placeholder lines only (no real lyrics in the repo)
 const LRC = '[00:01.50] line one\n[00:04.20] line two\n[00:04.20][00:30.00] chorus\n[01:02.345] line four\nnot a timed line';

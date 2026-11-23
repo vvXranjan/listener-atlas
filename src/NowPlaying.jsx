@@ -23,9 +23,9 @@ import { setNow } from './nowStore.js';
 import { playHere, useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
 import { everyWhileVisible } from './visibility.js';
 import ArtistLink from './ArtistLink.jsx';
-import { openLyrics } from './LyricsView.jsx';
+import { openLyrics, openAmbient } from './LyricsView.jsx';
 
-const POLL_MS = 5000;
+const POLL_MS = 2500; // what's playing: every 2.5 s while you look
 const mmss = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -36,6 +36,7 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
   const [connected, setConnected] = useState(isLoggedIn());
   const [np, setNp] = useState(null);
   const [error, setError] = useState('');
+  const [notAllowed, setNotAllowed] = useState(false); // logged in, but not on the app's Spotify list
   const [setup, setSetup] = useState(false);
   const [clientId, setClientId] = useState(getClientId());
   const [, tick] = useState(0);
@@ -63,6 +64,7 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
         const r = await currentlyPlaying();
         if (stop) return;
         setError('');
+        setNotAllowed(false);
         setNp(r);
         setNow({ track: r?.track || null, playing: !!r?.playing, progressMs: r?.progressMs || 0, fetchedAt: Date.now() });
         const id = r?.track?.id || null;
@@ -72,17 +74,33 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
         }
       } catch (e) {
         if (stop) return;
+        if (e.notAllowed) {
+          setNotAllowed(true);
+          setError('');
+          return;
+        }
         setError(e.message);
         if (!isLoggedIn()) setConnected(false);
       }
     }
-    // every 5s while you look; every 15s in a background tab (keeps your set in sync)
+    // every 2.5 s while you look; every 15 s in a background tab (keeps your set in sync)
     const off = everyWhileVisible(poll, POLL_MS, 15000);
+    // Spotify changed song (Auto-DJ, your phone) or you came back to the tab: look right away
+    let soonT = null;
+    const soon = () => {
+      clearTimeout(soonT);
+      soonT = setTimeout(poll, 500);
+    };
+    window.addEventListener('spotify-changed', soon);
+    window.addEventListener('focus', soon);
     const p = setInterval(() => !document.hidden && tick((n) => n + 1), 1000); // smooth progress bar
     return () => {
       stop = true;
       off();
       clearInterval(p);
+      clearTimeout(soonT);
+      window.removeEventListener('spotify-changed', soon);
+      window.removeEventListener('focus', soon);
     };
   }, [connected]);
 
@@ -90,6 +108,7 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
     setCtlErr('');
     try {
       await fn();
+      window.dispatchEvent(new CustomEvent('spotify-changed'));
     } catch (e) {
       setCtlErr(e.message);
     }
@@ -129,6 +148,46 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
             }}
           />
         )}
+      </div>
+    );
+  }
+
+  if (notAllowed) {
+    return (
+      <div className="np np-blocked">
+        <div className="np-head">
+          <span className="np-tag">
+            <SpotifyIcon /> Almost there
+          </span>
+          <button
+            className="np-logout"
+            onClick={() => {
+              logout();
+              setConnected(false);
+              setNotAllowed(false);
+            }}
+          >
+            Disconnect
+          </button>
+        </div>
+        <b className="np-blocked-title">Spotify hasn't let your account in yet</b>
+        <p className="muted">
+          This app is in Spotify's test mode, so only accounts the owner adds can play music here. Send the owner the <b>email of your Spotify account</b>,
+          then connect again.
+        </p>
+        <p className="muted">
+          Meanwhile, everything else works: the globe, Artist Galaxy, genres, albums, search and 30 s previews.
+        </p>
+        <button
+          className="btn-ghost sm"
+          onClick={() => {
+            logout();
+            setConnected(false);
+            setNotAllowed(false);
+          }}
+        >
+          Try connecting again
+        </button>
       </div>
     );
   }
@@ -245,6 +304,9 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
             </button>
             <button className="btn-ghost sm" onClick={openLyrics}>
               🎤 Lyrics
+            </button>
+            <button className="btn-ghost sm" onClick={openAmbient} title="Full-screen lyrics over moving scenes">
+              🌊 Scenes
             </button>
             <button className="btn-ghost sm" onClick={onLibrary}>
               ♥ Library
