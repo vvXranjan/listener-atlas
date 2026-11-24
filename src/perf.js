@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { TERRAIN_SPEC } from './mapStyles.js';
 
 // Smooth experience on every Mac: the app watches its own frame rate while the globe
 // moves. If it struggles, it switches to "smooth" quality (sharpness, 3D terrain,
@@ -49,19 +48,19 @@ export function usePerf() {
   return s;
 }
 
-// Sharpness: full on Retina in quality mode, a little softer in smooth mode
-export function pixelRatioFor(q, dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1) {
-  return q === 'smooth' ? Math.min(dpr, 1.25) : Math.min(dpr, 2);
+// Sharpness: Retina up to 2x, the same in every mode (see applyToMap)
+export function pixelRatioFor(_q, dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1) {
+  return Math.min(dpr, 2);
 }
 
 function applyToMap() {
   if (!map) return;
   const q = getQuality();
+  // Sharpness stays fixed: the map and the bars share one canvas, and changing it while
+  // running makes them drift apart (bars no longer standing on their cities).
   try {
-    map.setPixelRatio(pixelRatioFor(q));
-  } catch {}
-  try {
-    if (map.getSource('dem')) map.setTerrain(q === 'smooth' ? null : TERRAIN_SPEC);
+    // 3D terrain stays off in every mode: it pushes cities away from their bars when tilted
+    if (map.getTerrain?.()) map.setTerrain(null);
     if (map.getLayer('relief')) map.setLayoutProperty('relief', 'visibility', q === 'smooth' ? 'none' : 'visible');
   } catch {}
 }

@@ -9,7 +9,8 @@ import { getSet, saveSet, onSetChange, getPlayed, onPlayedChange, clearPlayed, g
 import { bestNextFor, useSpotifyQueue, UP_NEXT } from './setSync.js';
 import { idOf, firstArtist, getJson, useAnalyses, Chips, Link, SongSearch } from './mixParts.jsx';
 import ArtistLink from './ArtistLink.jsx';
-import { MODES, modeInfo } from './djModes.js';
+import { MODES, modeInfo, BAR_CHOICES, barsDesc } from './djModes.js';
+import { reorder, dropIndex } from './reorder.js';
 
 // "Your set": your own list of songs, how well they flow, best order and Auto-DJ.
 // Lives inside Mix Lab, or pops out as a floating window.
@@ -89,6 +90,37 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
       return n;
     });
   const remove = (i) => setSet((cur) => cur.filter((_, k) => k !== i));
+  const moveTo = (from, to) => setSet((cur) => reorder(cur, from, to));
+
+  // Drag a song by its ⠿ handle to a new place (like Spotify's queue)
+  const listRef = useRef(null);
+  const [drag, setDrag] = useState(null); // { from, to, dy }
+  function startDrag(e, from) {
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rows = [...(listRef.current?.querySelectorAll('li[data-set]') || [])].map((r) => {
+      const b = r.getBoundingClientRect();
+      return { i: Number(r.dataset.set), mid: b.top + b.height / 2 };
+    });
+    const y0 = e.clientY;
+    let to = from;
+    setDrag({ from, to, dy: 0 });
+    const onMove = (ev) => {
+      to = dropIndex(rows, from, ev.clientY);
+      setDrag({ from, to, dy: ev.clientY - y0 });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      setDrag(null);
+      moveTo(from, to);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
 
   async function queue(s) {
     const id = idOf(s);
@@ -243,7 +275,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
             {!set.length && <div className="muted">Add picks or any song you like. Each new song gets its own best-next ideas.</div>}
 
             {chain.length > 0 && set.length > 0 && (
-              <ol className="ml-chain">
+              <ol className={`ml-chain ${drag ? 'dragging' : ''}`} ref={listRef}>
                 {chain.map((s, i) => {
                   const cur = withAudio(s);
                   const prev = i ? withAudio(chain[i - 1]) : null;
@@ -252,8 +284,12 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                     <React.Fragment key={idOf(s) + i}>
                       {prev && <Link from={prev} to={cur} />}
                       <li
-                        className={`${s.now ? 'now' : ''} ${!s.now ? 'clickable' : ''} ${isDjCurrent(s) ? 'playing' : ''}`}
-                        onClick={() => !s.now && playNow(s, setIdx)}
+                        data-set={s.now ? undefined : setIdx}
+                        className={`${s.now ? 'now' : ''} ${!s.now ? 'clickable' : ''} ${isDjCurrent(s) ? 'playing' : ''} ${
+                          drag && !s.now && drag.from === setIdx ? 'drag-me' : ''
+                        } ${drag && !s.now && drag.from !== setIdx && drag.to === setIdx ? (drag.to > drag.from ? 'drop-after' : 'drop-before') : ''}`}
+                        style={drag && !s.now && drag.from === setIdx ? { transform: `translateY(${drag.dy}px)` } : undefined}
+                        onClick={() => !drag && !s.now && playNow(s, setIdx)}
                         title={s.now ? 'Playing now' : dj.on ? 'Mix into this song now' : 'Play this now on your Spotify (with a fade)'}
                       >
                         <div className="ml-cover">
@@ -264,8 +300,9 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                           <div className="un-title">
                             {s.now && <span className="ml-now">NOW</span>}
                             {!s.now && setIdx < UP_NEXT && <span className="ml-upnext">NEXT {setIdx + 1}</span>}
+                            {s.by && <span className="ml-auto jam" title="A friend added this in your Jam">🎉 {s.by}</span>}
                             {s.queued && <span className="ml-auto queued" title="You queued this in Spotify (phone, Mac…) while Auto-DJ ran">📱 you queued</span>}
-                            {s.auto && !s.queued && (
+                            {s.auto && !s.queued && !s.by && (
                               <span className="ml-auto" title={s.habit || 'Added automatically: best match after the previous song'}>
                                 {s.habit ? '🔁 habit' : 'auto'}
                               </span>
@@ -283,6 +320,17 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                         </div>
                         {!s.now && (
                           <div className="ml-ctrl" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="ml-grip"
+                              onPointerDown={(e) => startDrag(e, setIdx)}
+                              aria-label="Drag to reorder"
+                              title="Drag to move this song"
+                            >
+                              ⠿
+                            </button>
+                            <button onClick={() => moveTo(setIdx, 0)} disabled={setIdx === 0} aria-label="Play next" title="Play next (move to the top)">
+                              ⤒
+                            </button>
                             <button onClick={() => move(setIdx, -1)} disabled={setIdx === 0} aria-label="Move up">
                               ↑
                             </button>
@@ -412,10 +460,10 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                             {dj.plan.icon} {dj.plan.label}
                             {dj.plan.auto ? ' (AI)' : ''}
                           </b>{' '}
-                          · {dj.plan.why}
+                          {dj.plan.lengthText && <span className="dj-bars-tag"> · {dj.plan.lengthText}</span>} · {dj.plan.why}
                         </div>
                       )}
-                      <DjModes mode={prefs.djMode || 'auto'} />
+                      <DjModes mode={prefs.djMode || 'auto'} bars={prefs.djBars ?? 'auto'} />
 
                       <div className="un-actions">
                         {dj.paused ? (
@@ -445,7 +493,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
                           Queue all
                         </button>
                       </div>
-                      <DjModes mode={prefs.djMode || 'auto'} />
+                      <DjModes mode={prefs.djMode || 'auto'} bars={prefs.djBars ?? 'auto'} />
                       <div className="muted ml-dj-note">
                         Auto-DJ lets the current song play, then near the end moves into the next one in the style you pick. It measures each song in the background while you listen. Smoothest with "⇣ Play here".
                       </div>
@@ -475,7 +523,7 @@ export default function SetPanel({ start, onLibrary, onFloat, floating = false }
 }
 
 // Transition style for Auto-DJ (can be changed while it runs; the next transition uses it)
-function DjModes({ mode }) {
+function DjModes({ mode, bars }) {
   return (
     <div className="dj-modes">
       <div className="dj-mode-row">
@@ -486,6 +534,15 @@ function DjModes({ mode }) {
         ))}
       </div>
       <div className="muted dj-mode-desc">{modeInfo(mode).desc}</div>
+      <div className="dj-mode-row dj-bars" role="group" aria-label="Transition length in bars">
+        <span className="dj-bars-label">Length</span>
+        {BAR_CHOICES.map((b) => (
+          <button key={b} className={`gx-fxbtn ${bars === b ? 'on' : ''}`} title={barsDesc(b)} onClick={() => setPref('djBars', b)}>
+            {b === 'auto' ? '🤖 Auto' : `${b} bar${b === 1 ? '' : 's'}`}
+          </button>
+        ))}
+      </div>
+      <div className="muted dj-mode-desc">{barsDesc(bars)}</div>
     </div>
   );
 }

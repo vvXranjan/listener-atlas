@@ -10,6 +10,8 @@ import Starfield from './Starfield.jsx';
 import LiveTicker from './LiveTicker.jsx';
 import Shazam from './Shazam.jsx';
 import AutoDjFab from './AutoDjFab.jsx';
+import JamPanel from './JamPanel.jsx';
+import { resumeJam, useJam, openJam } from './jam.js';
 import NowPlaying from './NowPlaying.jsx';
 import SongDrawer from './SongDrawer.jsx';
 import Safe from './Safe.jsx';
@@ -26,9 +28,11 @@ const FloatingSet = lazy(() => import('./FloatingSet.jsx'));
 import { useNowItem } from './mixParts.jsx';
 import { startSetSync } from './setSync.js';
 import { startHabits } from './habits.js';
-import { STYLES, SKY, PLACES, TERRAIN_SPEC, nightPolygon, graticule } from './mapStyles.js';
+import { STYLES, SKY, PLACES, nightPolygon, graticule } from './mapStyles.js';
 import { flag, countryName, countryZoom, distanceKm } from './countries.js';
 import { getNow } from './nowStore.js';
+import { rememberLastSong } from './resume.js';
+import Presence from './Presence.jsx';
 
 const GLOBE_ZOOM = 2.6; // below this we are "in space"
 const ALL = 'ALL';
@@ -115,6 +119,8 @@ export default function App() {
   const [ambient, setAmbient] = useState(false);
   const [albums, setAlbums] = useState(null); // { artist } or { albumId } shown in the albums page
   const [genre, setGenre] = useState(null); // { tag, artist, songs } shown in the genre page
+  const [jamOpen, setJamOpen] = useState(false);
+  const jam = useJam();
   const [library, setLibrary] = useState(false); // your Spotify library popup
   const [nowTrack, setNowTrack] = useState(null); // what's playing on your Spotify
   const { mode: perfMode, quality } = usePerf();
@@ -122,6 +128,8 @@ export default function App() {
   useEffect(() => {
     startSetSync();
     startHabits(); // learns what you play after what (from Spotify's recently played)
+    rememberLastSong(); // so a refresh can pick up where you left off
+    resumeJam(); // keep hosting the Jam you started before the refresh
   }, []);
   const [floatSet, setFloatSetState] = useState(() => {
     try {
@@ -211,19 +219,16 @@ export default function App() {
           firstLabel
         );
       }
-      // 3D mountains (satellite style only)
-      try {
-        if (map.getSource('dem')) map.setTerrain(TERRAIN_SPEC);
-      } catch (e) {
-        console.warn('Terrain not available', e);
-      }
+      // No raised 3D terrain: the listener bars are drawn at sea level, and a raised map
+      // would slide the cities away from their bars when the globe is tilted.
+      // (Mountains still show through the relief shading.)
     });
     const nightTimer = setInterval(() => {
       map.getSource('dusk')?.setData(nightPolygon(new Date(), 0));
       map.getSource('night')?.setData(nightPolygon(new Date(), -12));
     }, 60000);
 
-    const overlay = new MapLibreOverlay({ interleaved: true, layers: [] });
+    const overlay = new MapLibreOverlay({ interleaved: true, useDevicePixels: pixelRatioFor(getQuality()), layers: [] });
     overlayRef.current = overlay;
     map.addControl(overlay);
 
@@ -408,6 +413,8 @@ export default function App() {
       setLyricsOpen(false);
       setAmbient(true);
     };
+    const onJam = () => setJamOpen(true);
+    window.addEventListener('open-jam', onJam);
     window.addEventListener('open-lyrics', onLyrics);
     window.addEventListener('open-ambient', onAmbient);
     window.addEventListener('open-galaxy', on);
@@ -418,6 +425,7 @@ export default function App() {
       window.removeEventListener('open-genre', onGenre);
       window.removeEventListener('open-albums', onAlbums);
       window.removeEventListener('open-lyrics', onLyrics);
+      window.removeEventListener('open-jam', onJam);
       window.removeEventListener('open-ambient', onAmbient);
     };
   }, []);
@@ -998,6 +1006,9 @@ export default function App() {
       </Safe>
       <Safe name="Auto-DJ switch" quiet>
         <AutoDjFab onOpenSet={() => setMixLab({ track: nowTrack })} />
+        <button className={`jam-fab ${jam.jam ? 'on' : ''}`} onClick={openJam} title={jam.jam ? 'Your Jam is live: show the QR code' : 'Start a Jam: friends scan a QR code and add songs'}>
+          🎉 {jam.jam ? <>Jam · {jam.jam.code}{jam.guests ? <i> · 👥 {jam.guests}</i> : null}</> : 'Jam'}
+        </button>
       </Safe>
 
       <SongDrawer
@@ -1021,19 +1032,21 @@ export default function App() {
         onClose={() => setSong(null)}
       />
 
-      {mixLab && (
-        <Safe name="Mix Lab" onClose={() => setMixLab(null)}>
-          <MixLab
-            track={nowTrack || mixLab.track}
-            onArtist={(a) => openArtist(a)}
-            onLibrary={(tab) => setLibrary(typeof tab === 'string' ? tab : 'liked')}
-            onFloat={() => setFloatSet(true)}
-            floatingSet={floatSet}
-            onDock={() => setFloatSet(false)}
-            onClose={() => setMixLab(null)}
-          />
-        </Safe>
-      )}
+      <Presence show={!!mixLab}>
+        {mixLab && (
+          <Safe name="Mix Lab" onClose={() => setMixLab(null)}>
+            <MixLab
+              track={nowTrack || mixLab.track}
+              onArtist={(a) => openArtist(a)}
+              onLibrary={(tab) => setLibrary(typeof tab === 'string' ? tab : 'liked')}
+              onFloat={() => setFloatSet(true)}
+              floatingSet={floatSet}
+              onDock={() => setFloatSet(false)}
+              onClose={() => setMixLab(null)}
+            />
+          </Safe>
+        )}
+      </Presence>
       {floatSet && (
         <Safe name="Your set" onClose={() => setFloatSet(false)} quiet>
           <FloatingSet
@@ -1044,18 +1057,20 @@ export default function App() {
           />
         </Safe>
       )}
-      {library && (
-        <Safe name="Library" onClose={() => setLibrary(false)}>
-          <Library
-            initialTab={library}
-            onClose={() => setLibrary(false)}
-            onMixLab={(t) => {
-              setLibrary(false);
-              setMixLab({ track: t });
-            }}
-          />
-        </Safe>
-      )}
+      <Presence show={!!library}>
+        {library && (
+          <Safe name="Library" onClose={() => setLibrary(false)}>
+            <Library
+              initialTab={library}
+              onClose={() => setLibrary(false)}
+              onMixLab={(t) => {
+                setLibrary(false);
+                setMixLab({ track: t });
+              }}
+            />
+          </Safe>
+        )}
+      </Presence>
 
       <ArtistDrawer
         artist={drawer}
@@ -1070,64 +1085,82 @@ export default function App() {
         }}
       />
 
-      {galaxy && (
-        <Safe name="Artist Galaxy" onClose={() => setGalaxy(null)}>
-          <ArtistGalaxy
-            key={galaxy}
-            name={galaxy}
-            onClose={() => setGalaxy(null)}
-            onMixLab={(t) => {
-              setGalaxy(null);
-              setMixLab({ track: t });
-            }}
-          />
-        </Safe>
-      )}
+      <Presence show={!!galaxy}>
+        {galaxy && (
+          <Safe name="Artist Galaxy" onClose={() => setGalaxy(null)}>
+            <ArtistGalaxy
+              key={galaxy}
+              name={galaxy}
+              onClose={() => setGalaxy(null)}
+              onMixLab={(t) => {
+                setGalaxy(null);
+                setMixLab({ track: t });
+              }}
+            />
+          </Safe>
+        )}
+      </Presence>
 
-      {ambient && (
-        <Safe name="Ambient lyrics" onClose={() => setAmbient(false)}>
-          <AmbientLyrics onClose={() => setAmbient(false)} />
-        </Safe>
-      )}
+      <Presence show={!!ambient}>
+        {ambient && (
+          <Safe name="Ambient lyrics" onClose={() => setAmbient(false)}>
+            <AmbientLyrics onClose={() => setAmbient(false)} />
+          </Safe>
+        )}
+      </Presence>
 
-      {lyricsOpen && (
-        <Safe name="Lyrics" onClose={() => setLyricsOpen(false)}>
-          <LyricsView onClose={() => setLyricsOpen(false)} />
-        </Safe>
-      )}
+      <Presence show={!!lyricsOpen}>
+        {lyricsOpen && (
+          <Safe name="Lyrics" onClose={() => setLyricsOpen(false)}>
+            <LyricsView onClose={() => setLyricsOpen(false)} />
+          </Safe>
+        )}
+      </Presence>
 
-      {albums && (
-        <Safe name="Albums" onClose={() => setAlbums(null)}>
-          <AlbumsView
-            key={`${albums.artist}|${albums.albumId}`}
-            artist={albums.artist}
-            albumId={albums.albumId}
-            onClose={() => setAlbums(null)}
-            onMixLab={(t) => {
-              setAlbums(null);
-              setGalaxy(null);
-              setMixLab({ track: t });
-            }}
-          />
-        </Safe>
-      )}
+      <Presence show={!!albums}>
+        {albums && (
+          <Safe name="Albums" onClose={() => setAlbums(null)}>
+            <AlbumsView
+              key={`${albums.artist}|${albums.albumId}`}
+              artist={albums.artist}
+              albumId={albums.albumId}
+              onClose={() => setAlbums(null)}
+              onMixLab={(t) => {
+                setAlbums(null);
+                setGalaxy(null);
+                setMixLab({ track: t });
+              }}
+            />
+          </Safe>
+        )}
+      </Presence>
 
-      {genre && (
-        <Safe name="Genre" onClose={() => setGenre(null)}>
-          <GenreView
-            key={genre.tag}
-            tag={genre.tag}
-            artist={genre.artist}
-            artistSongs={genre.songs}
-            onClose={() => setGenre(null)}
-            onMixLab={(t) => {
-              setGenre(null);
-              setGalaxy(null);
-              setMixLab({ track: t });
-            }}
-          />
-        </Safe>
-      )}
+      <Presence show={jamOpen}>
+        {jamOpen && (
+          <Safe name="Jam" onClose={() => setJamOpen(false)}>
+            <JamPanel onClose={() => setJamOpen(false)} />
+          </Safe>
+        )}
+      </Presence>
+
+      <Presence show={!!genre}>
+        {genre && (
+          <Safe name="Genre" onClose={() => setGenre(null)}>
+            <GenreView
+              key={genre.tag}
+              tag={genre.tag}
+              artist={genre.artist}
+              artistSongs={genre.songs}
+              onClose={() => setGenre(null)}
+              onMixLab={(t) => {
+                setGenre(null);
+                setGalaxy(null);
+                setMixLab({ track: t });
+              }}
+            />
+          </Safe>
+        )}
+      </Presence>
     </div>
   );
 }

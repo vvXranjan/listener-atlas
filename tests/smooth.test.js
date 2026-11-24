@@ -41,9 +41,10 @@ describe('Adaptive quality', () => {
     expect(j.frame(5000, true)).toBe(null); // a paused tab is ignored
   });
 
-  it('is a little softer in smooth mode on Retina screens', () => {
+  it('keeps the same sharpness in every mode (map and bars share one canvas)', () => {
     expect(pixelRatioFor('quality', 2)).toBe(2);
-    expect(pixelRatioFor('smooth', 2)).toBe(1.25);
+    expect(pixelRatioFor('smooth', 2)).toBe(2);
+    expect(pixelRatioFor('smooth', 3)).toBe(2);
     expect(pixelRatioFor('smooth', 1)).toBe(1);
   });
 });

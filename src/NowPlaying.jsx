@@ -12,7 +12,6 @@ import {
   onRightHost,
   moveToRightHost,
   redirectUri,
-  canStream,
   canQueue,
   pausePlayback,
   resumePlayback,
@@ -20,10 +19,13 @@ import {
   previousTrack,
 } from './spotify.js';
 import { setNow } from './nowStore.js';
-import { playHere, useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
+import { useSpotifyPlayer, togglePlayHere, autoPauseOn, setAutoPause, ensureDevice, seekHere } from './spotifyPlayer.js';
 import { everyWhileVisible } from './visibility.js';
 import ArtistLink from './ArtistLink.jsx';
 import { openLyrics, openAmbient } from './LyricsView.jsx';
+import { useCoverColor } from './lyricsCore.js';
+import { useSpotifyQueue } from './setSync.js';
+import { resumeOnOpen, resumeOn, setResumeOn } from './resume.js';
 
 const POLL_MS = 2500; // what's playing: every 2.5 s while you look
 const mmss = (ms) => {
@@ -44,6 +46,20 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
   const [autoPause, setAutoPauseState] = useState(autoPauseOn());
   const [ctlErr, setCtlErr] = useState('');
   const [scrub, setScrub] = useState(null); // 0..1 while dragging the progress bar
+  const tint = useCoverColor(np?.track?.cover); // widget colour from the album cover
+  const [resume, setResume] = useState(resumeOn);
+  const [tapFor, setTapFor] = useState(null); // song waiting for your first tap (no Spotify app open)
+
+  // opened or refreshed: start your last song again
+  useEffect(() => {
+    if (!connected) return;
+    const t = setTimeout(() => {
+      resumeOnOpen({ onNeedTap: setTapFor })
+        .then((r) => (r === 'played' || r === 'resumed') && window.dispatchEvent(new CustomEvent('spotify-changed')))
+        .catch(() => {});
+    }, 800);
+    return () => clearTimeout(t);
+  }, [connected]);
   const lastId = useRef(null);
   const onChange = useRef(onSongChange);
   onChange.current = onSongChange;
@@ -66,7 +82,12 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
         setError('');
         setNotAllowed(false);
         setNp(r);
-        setNow({ track: r?.track || null, playing: !!r?.playing, progressMs: r?.progressMs || 0, fetchedAt: Date.now() });
+        setNow({
+          track: r?.track || null,
+          playing: !!r?.playing,
+          progressMs: r?.progressMs || 0,
+          fetchedAt: Date.now(),
+        });
         const id = r?.track?.id || null;
         if (id && id !== lastId.current) {
           lastId.current = id;
@@ -172,12 +193,10 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
         </div>
         <b className="np-blocked-title">Spotify hasn't let your account in yet</b>
         <p className="muted">
-          This app is in Spotify's test mode, so only accounts the owner adds can play music here. Send the owner the <b>email of your Spotify account</b>,
-          then connect again.
+          This app is in Spotify's test mode, so only accounts the owner adds can play music here. Send the owner the <b>email of your Spotify account</b>, then
+          connect again.
         </p>
-        <p className="muted">
-          Meanwhile, everything else works: the globe, Artist Galaxy, genres, albums, search and 30 s previews.
-        </p>
+        <p className="muted">Meanwhile, everything else works: the globe, Artist Galaxy, genres, albums, search and 30 s previews.</p>
         <button
           className="btn-ghost sm"
           onClick={() => {
@@ -193,9 +212,7 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
   }
 
   const tr = np?.track;
-  const progress = tr
-    ? Math.min(tr.durationMs, np.progressMs + (np.playing ? Date.now() - np.fetchedAt : 0))
-    : 0;
+  const progress = tr ? Math.min(tr.durationMs, np.progressMs + (np.playing ? Date.now() - np.fetchedAt : 0)) : 0;
 
   return (
     <div className="np">
@@ -225,25 +242,21 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
       )}
 
       {tr && (
-        <>
-          <div className="np-row">
-            {tr.cover && <img src={tr.cover} alt="" className={np.playing ? 'spin' : ''} />}
-            <div className="np-text">
-              <a href={tr.url} target="_blank" rel="noreferrer" className="np-title">
-                {tr.name}
-              </a>
-              <div className="np-artists">
-                {tr.artists.map((a, i) => (
-                  <span key={a.name + i}>
-                    {i > 0 && ', '}
-                    <ArtistLink name={a.name} />
-                  </span>
-                ))}
-              </div>
-            </div>
+        <div className="npw" style={tint ? { '--tint': tint } : undefined}>
+          <div className="npw-top">{tr.cover ? <img key={tr.id} src={tr.cover} alt="" className="npw-cover" /> : <span className="npw-cover ph" />}</div>
+          <a key={tr.id} href={tr.url} target="_blank" rel="noreferrer" className="npw-title" title={tr.name}>
+            {tr.name}
+          </a>
+          <div className="npw-artists">
+            {tr.artists.map((a, i) => (
+              <span key={a.name + i}>
+                {i > 0 && ', '}
+                <ArtistLink name={a.name} />
+              </span>
+            ))}
           </div>
           <div
-            className={`np-bar seek ${scrub != null ? 'scrubbing' : ''}`}
+            className={`np-bar npw-bar seek ${scrub != null ? 'scrubbing' : ''}`}
             role="slider"
             tabIndex={0}
             aria-label="Song position"
@@ -285,13 +298,54 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
               control(() => seekHere(ms));
             }}
           >
-            <div style={{ width: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%` }} />
-            <i className="np-knob" style={{ left: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%` }} />
+            <div
+              style={{
+                width: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%`,
+              }}
+            />
+            <i
+              className="np-knob"
+              style={{
+                left: `${((scrub != null ? scrub * tr.durationMs : progress) / tr.durationMs) * 100}%`,
+              }}
+            />
           </div>
-          <div className="np-time muted">
+          <div className="np-time npw-time">
             <span>{mmss(scrub != null ? scrub * tr.durationMs : progress)}</span>
             <span>{mmss(tr.durationMs)}</span>
           </div>
+          {canQueue() && (
+            <div className="npw-ctl">
+              <button aria-label="Previous" onClick={() => control(() => previousTrack())}>
+                <PrevIcon />
+              </button>
+              <button
+                className="npw-main"
+                aria-label={np?.playing ? 'Pause' : 'Play'}
+                onClick={() => control(async () => (sdk.active ? togglePlayHere() : np?.playing ? pausePlayback() : resumePlayback(await ensureDevice())))}
+              >
+                {np?.playing ? <PauseIcon /> : <PlayIcon />}
+              </button>
+              <button aria-label="Next" onClick={() => control(() => nextTrack())}>
+                <NextIcon />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tr && canQueue() && (
+        <UpNext
+          onSkip={(n) =>
+            control(async () => {
+              for (let i = 0; i < n; i++) await nextTrack();
+            })
+          }
+        />
+      )}
+
+      {tr && (
+        <>
           <div className="np-actions">
             <button className="btn-green sm" onClick={() => onMixLab(tr)}>
               ✦ Mix Lab: what's next?
@@ -321,55 +375,6 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
 
       {canQueue() && (
         <div className="np-player">
-          <div className="np-ctl">
-            <button aria-label="Previous" onClick={() => control(() => previousTrack())}>⏮</button>
-            <button
-              className="np-ctl-main"
-              aria-label={np?.playing ? 'Pause' : 'Play'}
-              onClick={() =>
-                control(async () =>
-                  sdk.active ? togglePlayHere() : np?.playing ? pausePlayback() : resumePlayback(await ensureDevice())
-                )
-              }
-            >
-              {np?.playing ? '❚❚' : '▶'}
-            </button>
-            <button aria-label="Next" onClick={() => control(() => nextTrack())}>⏭</button>
-            {tr && (
-              <button
-                className="np-skip"
-                aria-label="Forward 15 seconds"
-                title="Forward 15s"
-                onClick={() => {
-                  const ms = Math.min(tr.durationMs - 1000, progress + 15000);
-                  setNp((cur) => (cur ? { ...cur, progressMs: ms, fetchedAt: Date.now() } : cur));
-                  control(() => seekHere(ms));
-                }}
-              >
-                +15
-              </button>
-            )}
-            {canStream() ? (
-              sdk.active ? (
-                <span className="np-here on">● Playing in Listener Atlas</span>
-              ) : (
-                <button className="np-here" disabled={sdk.loading} onClick={() => control(() => playHere())}>
-                  {sdk.loading ? 'Connecting…' : '⇣ Play here'}
-                </button>
-              )
-            ) : (
-              <button
-                className="np-here"
-                title="Needs one more Spotify permission"
-                onClick={async () => {
-                  logout();
-                  await login();
-                }}
-              >
-                Reconnect to play here
-              </button>
-            )}
-          </div>
           <label className="np-follow">
             <input
               type="checkbox"
@@ -381,10 +386,74 @@ export default function NowPlaying({ onSongChange, onDetails, onMixLab, onLibrar
             />
             Pause my Spotify while I preview songs here
           </label>
+          <label className="np-follow">
+            <input
+              type="checkbox"
+              checked={resume}
+              onChange={(e) => {
+                setResume(e.target.checked);
+                setResumeOn(e.target.checked);
+              }}
+            />
+            Keep playing my last song when I open the site
+          </label>
+          {tapFor && <div className="np-tap">▶ Click anywhere to keep playing “{tapFor}”</div>}
           {(ctlErr || sdk.error) && <div className="status err">{ctlErr || sdk.error}</div>}
         </div>
       )}
       {error && <div className="status err">{error}</div>}
+    </div>
+  );
+}
+
+// ---------- widget bits ----------
+const PrevIcon = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <path d="M11.5 6v12L3 12l8.5-6Zm9.5 0v12l-8.5-6L21 6Z" fill="currentColor" />
+  </svg>
+);
+const NextIcon = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <path d="M12.5 6v12L21 12l-8.5-6ZM3 6v12l8.5-6L3 6Z" fill="currentColor" />
+  </svg>
+);
+const PauseIcon = () => (
+  <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+    <rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" />
+    <rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor" />
+  </svg>
+);
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+    <path d="M7 4.5v15l13-7.5-13-7.5Z" fill="currentColor" />
+  </svg>
+);
+
+// One small "up next" widget, tinted by its cover
+function UpNextCard({ t, n, onSkip }) {
+  const tint = useCoverColor(t.cover);
+  return (
+    <button className="npw-mini" style={tint ? { '--tint': tint } : undefined} onClick={() => onSkip(n)} title={`Skip to "${t.title}"`}>
+      {t.cover ? <img src={t.cover} alt="" /> : <span className="ph" />}
+      <b>{t.title}</b>
+      <small>{t.artist}</small>
+    </button>
+  );
+}
+
+// The next songs in your Spotify queue, as widgets you can tap to skip to
+function UpNext({ onSkip }) {
+  const q = useSpotifyQueue(true);
+  const items = (q?.queue || []).slice(0, 6);
+  if (!items.length) return null;
+  return (
+    <div className="npw-next">
+      <div className="npw-next-h">Up next on Spotify</div>
+      <div className="npw-row">
+        {items.map((t, i) => (
+          <UpNextCard key={`${t.uri}|${i}`} t={t} n={i + 1} onSkip={onSkip} />
+        ))}
+      </div>
     </div>
   );
 }

@@ -175,10 +175,37 @@ export const GlobeBars = memo(function GlobeBars({ mapRef, overlayRef, points, m
 });
 
 // ---------- city labels + pins that follow the map ----------
+// the map's own rule for which places get a city name (see mapStyles.js)
+const CITY_FILTER = ['in', ['get', 'class'], ['literal', ['city', 'town']]];
+
 export const MapLabels = memo(function MapLabels({ mapRef, labelPoints, chartPins, cityPos, cityName, onOpenCity }) {
   const [state, setState] = useState({ labels: [], pins: [], pin: null });
   const src = useRef({});
   src.current = { labelPoints, chartPins, cityPos };
+
+  // The map has its own city names. Hide those for the cities we label ourselves
+  // (name + listeners), so the two don't sit on top of each other.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const names = [...new Set(labelPoints.map((d) => d.city).filter(Boolean))];
+    const apply = () => {
+      try {
+        if (!map.getStyle?.() || !map.getLayer('label-city')) return;
+        map.setFilter('label-city', [
+          'all',
+          CITY_FILTER,
+          ['!', ['in', ['coalesce', ['get', 'name:en'], ['get', 'name']], ['literal', names]]],
+          ['!', ['in', ['get', 'name'], ['literal', names]]],
+        ]);
+      } catch {
+        /* style still loading: the style.load hook below tries again */
+      }
+    };
+    apply();
+    map.on('style.load', apply);
+    return () => map.off('style.load', apply);
+  }, [mapRef, labelPoints]);
 
   useEffect(() => {
     const map = mapRef.current;

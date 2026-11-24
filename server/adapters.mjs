@@ -32,6 +32,7 @@ const CACHE = {
   music: 'public, s-maxage=3600',
   lyrics: 'public, s-maxage=86400',
   habits: 'private, no-store', // personal: never cached
+  jam: 'private, no-store', // live: never cached
 };
 
 // Node style (req, res): Vite dev server and Vercel functions.

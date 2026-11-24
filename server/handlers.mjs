@@ -23,7 +23,7 @@ const artistCache = new Map();
 
 export const ROUTES = [
   'live', 'cities', 'city', 'artist-info', 'artist', 'now-playing', 'shazam', 'song-insights', 'recommend',
-  'song-search', 'preview', 'audio', 'galaxy', 'habits', 'genre', 'music', 'lyrics',
+  'song-search', 'preview', 'audio', 'galaxy', 'habits', 'genre', 'music', 'lyrics', 'jam',
 ];
 
 // Only Apple's preview servers may be proxied (stops the proxy being used for anything else)
@@ -116,6 +116,11 @@ export async function handle({ route, method = 'GET', query = {}, body = null, h
       case 'habits': {
         const { habitsRoute } = await import('./habits.mjs');
         return habitsRoute({ method, headers, body, env });
+      }
+
+      case 'jam': {
+        const { jamRoute } = await import('./jam.mjs');
+        return jamRoute({ method, query, body, env });
       }
 
       case 'galaxy': {

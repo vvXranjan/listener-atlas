@@ -39,6 +39,7 @@ const slim = (s) => ({
   auto: !!s.auto,
   queued: !!s.queued,
   habit: s.habit || null,
+  by: s.by || null, // added by a friend in your Jam
 });
 
 // ---- the set
@@ -77,7 +78,7 @@ export function onPlayedChange(fn) {
 }
 
 // ---- set options
-export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false, radio: true, habitWeight: 0.5, djMode: 'auto' };
+export const DEFAULT_PREFS = { dropPlayed: true, autoFill: false, syncQueue: false, radio: true, habitWeight: 0.5, djMode: 'auto', djBars: 'auto' };
 export const getPrefs = () => ({ ...DEFAULT_PREFS, ...read(PREFS_KEY, {}) });
 export function setPref(k, v) {
   const p = { ...getPrefs(), [k]: v };

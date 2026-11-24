@@ -25,13 +25,66 @@ const BASE = {
   medium: { fadeOutMs: 7000, fadeInMs: 4500, lowPct: 0.12, gapMs: 0, startAtMs: 0 },
 };
 
-// beat length for the echo fade; falls back to 95 BPM
-const beatMs = (bpm) => {
-  let b = Number(bpm) || 95;
+// Tempo folded into a DJ range (70–160 BPM), so half/double-time reads the same
+export const djBpm = (bpm) => {
+  let b = Number(bpm);
+  if (!b || !isFinite(b) || b <= 0) return null;
   while (b > 160) b /= 2;
   while (b < 70) b *= 2;
-  return 60000 / b;
+  return b;
 };
+// beat length for the echo fade; falls back to 95 BPM
+const beatMs = (bpm) => 60000 / (djBpm(bpm) || 95);
+
+// Transition length in bars, like Spotify Mix (a bar = 4 beats)
+export const BAR_CHOICES = ['auto', 1, 2, 4, 8, 16];
+export const barsDesc = (b) =>
+  b === 'auto' || b == null
+    ? 'AI picks the length, then rounds it to whole bars so the fade lands on the beat.'
+    : `Every transition lasts exactly ${b} bar${b === 1 ? '' : 's'} (${b * 4} beats) of the playing song.`;
+const POW_BARS = [1, 2, 4, 8, 16];
+const MAX_FADE_MS = 40000;
+// the whole number of bars closest to a length in ms
+export function snapBars(ms, barMs) {
+  if (!barMs || !ms) return 1;
+  let best = 1;
+  for (const b of POW_BARS) if (Math.abs(Math.log((b * barMs) / ms)) < Math.abs(Math.log((best * barMs) / ms))) best = b;
+  return best;
+}
+const fmtS = (ms) => `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
+
+// Fit a plan to whole bars of the outgoing song's tempo.
+// bars: 'auto' (AI snaps its own length to the nearest 1/2/4/8/16 bars) or a number you picked.
+function fitBars(p, from, to, bars) {
+  const bpm = djBpm(from?.bpm);
+  if (!bpm) return { ...p, bars: null };
+  const barMs = (4 * 60000) / bpm;
+  const ratio = p.fadeOutMs ? p.fadeInMs / p.fadeOutMs : 0.6;
+  const picked = bars !== 'auto' && bars != null && POW_BARS.includes(Number(bars));
+  const out = { ...p, bpm: Math.round(bpm), barMs };
+  if (p.kind === 'echo') {
+    // echo steps down once per beat: 1 bar = 4 steps (kept between 4 and 16 steps)
+    const n = picked ? Number(bars) : 2;
+    out.beats = Math.max(4, Math.min(16, n * 4));
+    out.bars = out.beats / 4;
+    out.fadeOutMs = Math.round(out.beatMs * out.beats);
+  } else {
+    out.bars = picked ? Number(bars) : snapBars(p.fadeOutMs, barMs);
+    while (out.bars > 1 && out.bars * barMs > MAX_FADE_MS) out.bars /= 2; // keep very slow songs sane
+    out.fadeOutMs = Math.round(out.bars * barMs);
+    // fade in over whole bars of the NEXT song (or the same tempo if it isn't measured yet)
+    const toBar = (4 * 60000) / (djBpm(to?.bpm) || bpm);
+    const inBars = Math.max(1, snapBars(out.fadeOutMs * ratio, toBar));
+    out.fadeInMs = Math.min(Math.round(inBars * toBar), Math.max(300, Math.round(out.fadeOutMs * 1.2)));
+  }
+  // Hype: start the next song on a phrase line (a multiple of 8 of its bars), near 20 s in
+  if (p.startAtMs) {
+    const phrase = 8 * ((4 * 60000) / (djBpm(to?.bpm) || bpm));
+    out.startAtMs = Math.max(phrase, Math.round(p.startAtMs / phrase) * phrase);
+  }
+  out.lengthText = `${out.bars} bar${out.bars === 1 ? '' : 's'} · ${fmtS(out.fadeOutMs)} at ${out.bpm} BPM`;
+  return out;
+}
 
 function build(kind, from, why, extra = {}) {
   const p = { ...BASE[kind], ...extra };
@@ -45,7 +98,11 @@ function build(kind, from, why, extra = {}) {
 }
 
 // The plan for one transition. from/to: { bpm, key: { camelot }, energy } (any may be missing)
-export function planTransition(mode, from = {}, to = {}) {
+// opts.bars: 'auto' or 1/2/4/8/16 — the transition then lasts exactly that many bars
+export function planTransition(mode, from = {}, to = {}, opts = {}) {
+  return fitBars(pickPlan(mode, from || {}, to || {}), from, to, opts.bars ?? 'auto');
+}
+function pickPlan(mode, from, to) {
   if (mode && mode !== 'auto') return build(mode, from, modeInfo(mode).desc);
 
   const g = tempoGap(from?.bpm, to?.bpm);
@@ -65,4 +122,4 @@ export function planTransition(mode, from = {}, to = {}) {
 }
 
 // one short line for the screen
-export const planText = (p) => (p ? `${p.icon} ${p.label}${p.auto ? ' (AI)' : ''} · ${p.why}` : '');
+export const planText = (p) => (p ? `${p.icon} ${p.label}${p.auto ? ' (AI)' : ''}${p.lengthText ? ` · ${p.lengthText}` : ''} · ${p.why}` : '');

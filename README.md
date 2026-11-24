@@ -147,6 +147,7 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
   - **Stays on time in a background tab**: its clock runs in a Web Worker, which browsers don't slow down.
   - **Skips stray queue songs**: Spotify always plays its own queue first. If an old queued song starts right as your song ends, Auto-DJ skips it and plays your next set song (it shows "skipped N from queue").
   - **Never fights you**: pick a different song mid-way and Auto-DJ pauses; press **▶ Resume set** (or play a set song) to continue.
+  - **Reorder like Spotify's queue**: drag a song by its **⠿** handle to any place, tap **⤒** to play it next, or nudge it with ↑ / ↓.
   - **Always on**: as soon as you're connected, Auto-DJ switches itself on, even with an empty set (radio then picks what comes next). It never starts music by itself; it takes over when the song you're playing ends. Turn it off any time with the **Auto-DJ ON/OFF** switch.
   - **Globe follows your music**: with *Follow my music on the globe* (on by default) the globe flies to the listeners of whatever you play; the intro tour gives way to your music. A tour you start yourself keeps going over the current artist.
   - **In step with Spotify**: what's playing refreshes every 2.5 s, and right away when Auto-DJ or your phone changes the song, when you use the controls, or when you come back to the tab.
@@ -162,6 +163,8 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
     | 🔥 Hype | Short fade, next song starts about 20 s in (past the intro) |
     | 🌙 Chill | Very slow fade, a short silence, slow fade in |
 
+    - **Length in bars** (like Spotify Mix): pick **🤖 Auto, 1, 2, 4, 8 or 16 bars** under the modes. A bar is 4 beats of the playing song, so "4 bars" at 120 BPM is exactly 8 s. On Auto, the AI's length is rounded to the nearest 1/2/4/8/16 bars. The fade in is whole bars of the next song, Echo out steps once per beat, and Hype starts the next song on an 8-bar line near 20 s. The fade is timed to end right as the song ends. Without a measured tempo yet, it falls back to seconds. Fades are capped at 40 s.
+
     While a song plays, Auto-DJ measures the playing and next songs from their previews in the background, so the plan is ready before the mix. Spotify plays one song at a time per device, so transitions are shaped with volume, timing and start position (two songs can't overlap).
   - **Hears your phone**: queue a song in Spotify from your phone (or any device) while Auto-DJ runs and it **plays next** with a fade, joins the set tagged **📱 you queued**, then the set carries on. Songs that were already in your queue *before* Auto-DJ started count as old and are skipped. (Spotify lists your queued songs before the playlist's own next songs; Auto-DJ uses that to tell them apart.)
   - **Radio**: when the set runs out, it adds the best next song itself (your habits first, then recommendations, never a song you played in the last hour), tagged **🔁 habit** or **auto**. Turn it off with *Radio: keep going after the set*.
@@ -169,13 +172,35 @@ Your set lives in Mix Lab, or pops out with **⧉ Float** / **⧉ Set**.
 
 > Spotify plays one song at a time per account, so transitions are smooth fades, not overlaps. For true overlap, turn on *Crossfade songs* in the Spotify app (Settings → Playback).
 
+### Picks up where you left off
+
+When you open or refresh the site (and you're connected), your last Spotify song starts again:
+- Spotify paused somewhere (Mac, phone, speaker): it presses play there.
+- Nothing active: it plays your last song (from about where you were) on an open Spotify app, Mac first, then phone.
+- No Spotify app open anywhere: it plays in the tab after your first click (browsers block sound until you touch the page).
+- Music already playing: left alone.
+
+Turn it off with *Keep playing my last song when I open the site* under the Now Playing widget.
+
+### Jam: friends add songs from their phone
+Like Spotify Jam, but your friends don't need Spotify or a login.
+
+1. Tap **🎉 Jam** (above the Auto-DJ switch), type your name and press **Start Jam**.
+2. Friends scan the **QR code** (or open the link, or type the 6-letter code after `/?jam=`).
+3. On their phone they see what's playing and what's next, search any song and tap **+**.
+4. Within about 3 seconds the song lands in your set **right after the song playing now**, tagged **🎉 their name**. Songs play in the order friends added them. Keep **Auto-DJ on** so they play next with your transition style.
+
+Limits that keep it fair: each friend can have 4 songs waiting, one add every 5 seconds, 40 songs waiting in total, and no duplicates. A Jam ends when you press **End Jam**, or 8 hours after your app was last open. It keeps running after a refresh.
+
+It needs the cloud database (Upstash Redis, the same one as habits) on the live site. Locally (`npm run dev`) it works from memory, but phones can't open `localhost`, so host from the Vercel site.
+
 ### Lyrics
 
 **🎤 Lyrics** (Now Playing card and the mini player) opens the words of the song playing on your Spotify, **in time with the music**, Spotify-style: the current line in white, sung lines faded, the background coloured from the cover. Click a line to jump there. If the words run early or late, nudge them with **− / +**. Lyrics come from LRCLIB (lrclib.net), a free community library, through `/api/lyrics`; nothing is stored. Some songs only have unsynced lyrics, and some have none yet.
 
 ### Scenes: full-screen lyrics over moving worlds
 
-**🌊 Scenes** (Now Playing card, or the lyrics panel) goes full screen: a moving scene with **only the line being sung**, big and centred, the next line faint below. Scenes are drawn live on your graphics card: **🌊 Ocean** (stormy sea under clouds), **☁️ Clouds**, **🌌 Aurora**, **✨ Stars** (flying through space), **🎨 Cover glow** (flowing colours from the album cover), **🏖️ Beach** (waves washing onto the sand), **🌅 Sunset** (golden sun path on the sea) and **🌠 Milky Way** (the galaxy turning over dark hills). Each new line gives a soft glow. Controls fade away after a few seconds; move the mouse to bring them back. **← / →** switch scenes, **⛶** goes truly full screen, **Esc** closes. Your last scene is remembered. Only songs with synced lyrics show words here.
+**🌊 Scenes** (Now Playing card, or the lyrics panel) goes full screen: a moving scene with **only the line being sung**, big and centred, the next line faint below. Scenes are drawn live on your graphics card: **🌊 Ocean** (stormy sea under clouds), **☁️ Clouds**, **🌌 Aurora**, **✨ Stars** (flying through space), **🎨 Cover glow** (flowing colours from the album cover), **🏖️ Beach** (waves washing onto the sand), **🌅 Sunset** (golden sun path on the sea) and **🌠 Milky Way** (the galaxy turning over dark hills). Each new line gives a soft glow. Controls fade away after a few seconds; move the mouse to bring them back. **← / →** switch scenes, **⛶** goes truly full screen, **Esc** closes. Your last scene is remembered. Choose how much you see: **1 line** (the line being sung + a hint of the next), **3 lines**, **5 lines** or a whole **Verse** (3 before, 3 after); remembered for next time. Only songs with synced lyrics show words here.
 
 ### Search and albums
 
@@ -262,12 +287,12 @@ Set / now-playing stores (localStorage)       server/galaxy.mjs    → top songs
 - **Only the moving parts redraw.** Bars, city labels, pins and the tooltip update on their own while the globe moves, so the panels, drawers and player don't re-render 60 times a second.
 - **Fewer updates.** Bar sizes change in quarter-zoom steps; the "which side of the globe faces you" check runs about 6 times a second; labels update once per frame at most.
 - **Adaptive quality.** The app measures its own frame rate while the globe moves. If it drops below ~38 fps it switches to **Smooth**:
-  - sharpness is capped at 1.25× on Retina;
-  - 3D terrain and relief shading are off;
+  - relief shading is off;
   - the blur behind panels is replaced with solid glass;
   - a third of the stars are drawn, at 15 fps.
   
   It tries full quality again once after a calm minute; if it struggles again, it stays smooth. Pick it yourself with **⚡ Auto / ⚡ Smooth / ✨ Quality** in the bottom bar.
+- **Bars always stand on their cities.** The 3D terrain is off and sharpness never changes while running: both used to make the map and the bars drift apart when the globe was tilted.
 - **Background stars rest** when you're zoomed in and the globe covers the sky.
 - **Background tabs are quiet.** Live data pauses in hidden tabs; Now Playing slows to every 15 s (so your set stays in sync) and refreshes the moment you return.
 - **Panels load on demand.** Mix Lab, Galaxy, Library and the floating set download only when first opened.
@@ -337,6 +362,7 @@ All under `/api/`. Every outside request times out after 9 seconds, so nothing h
 | `preview` | `title`, `artist` | Best 30-second preview for a song |
 | `audio` | `u` | Proxies an Apple preview file (Apple hosts only) |
 | `habits` | GET / POST `{plays}` / DELETE, with `Authorization: Bearer <Spotify token>` | Your habits, saved under your Spotify account (503 = cloud not set up) |
+| `jam` | GET `code`, `guest` · POST `{action: create / add / sync / end}` | A Jam: what's playing, up next, songs friends added (host actions need the host key) |
 
 ---
 
@@ -383,7 +409,7 @@ tests/                    Vitest tests
 
 ## Tests
 
-Run the 102 tests:
+Run the 115 tests:
 
 ```bash
 npm test

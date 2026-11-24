@@ -13,7 +13,10 @@ const strip = (s) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
-const mainOf = (a) => String(a || '').split(/,|&| feat\.? | with /i)[0].trim();
+const mainOf = (a) =>
+  String(a || '')
+    .split(/,|&| feat\.? | with /i)[0]
+    .trim();
 
 async function getJson(url) {
   const r = await fetch(url);
@@ -254,7 +257,7 @@ export default function MusicSearch({ tracked = [], onArtistMap, onCity, onMixLa
               </section>
             )}
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

@@ -281,7 +281,7 @@ void main(){
   else if (uScene < 5.5) col = beach(uv, t);
   else if (uScene < 6.5) col = ocean(uv, t, 1.0);
   else col = milkyway(uv, t);
-  col *= 1.0 + uPulse * 0.08;
+  col *= 1.0 + uPulse * 0.045;
   float v = smoothstep(1.25, 0.35, length(uv * vec2(0.85, 1.1)));
   col *= mix(0.55, 1.0, v);
   gl_FragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.95)), 1.0);
@@ -342,7 +342,7 @@ export function startScene(canvas, { scene = 0, color = [0.3, 0.4, 0.5], scale =
     if (document.hidden || now - last < 32) return; // ~30 fps is plenty for slow motion
     last = now;
     resize();
-    st.pulse *= 0.9;
+    st.pulse *= 0.95; // a slow, soft glow (no flash)
     gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uTime, (now - t0) / 1000);
     gl.uniform1f(uScene, st.scene);

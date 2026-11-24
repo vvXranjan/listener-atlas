@@ -134,7 +134,7 @@ function featuresOf(song) {
 }
 export const djMode = () => getPrefs().djMode || 'auto';
 function planFor(fromSong, toSong) {
-  return planTransition(djMode(), featuresOf(fromSong), featuresOf(toSong));
+  return planTransition(djMode(), featuresOf(fromSong), featuresOf(toSong), { bars: getPrefs().djBars ?? 'auto' });
 }
 const playingSong = (pb) => getSet().find((s) => isPlayingSong(pb, s)) || (pb ? { title: pb.name, artist: pb.artist, uri: pb.uri } : null);
 
@@ -293,7 +293,8 @@ async function check(my) {
   if (!st.paused && Date.now() - lastScanAt >= (left0 < QUEUE_NEAR_MS ? 900 : 5000)) await scanQueue(pb);
   if (my !== run) return;
   const now = Date.now();
-  const leftMs = pb.durationMs - pb.positionMs;
+  let leftMs = pb.durationMs - pb.positionMs;
+  const endsAt = now + leftMs;
   let next = nextInSet(pb);
   // radio: set ran out, so add the best follow-up (your habits first, then recommendations)
   if (!next && !st.paused && radioOn() && radioFor !== pb.uri) {
@@ -350,12 +351,20 @@ async function check(my) {
       if (my !== run) return;
       next = nextInSet(pb) || next;
       plan = planFor(playingSong(pb), next);
+      leftMs = endsAt - Date.now();
     }
-    const fadeOutMs = Math.max(plan.kind === 'quick' ? 800 : 1500, Math.min(plan.fadeOutMs, leftMs - 400));
+    // wait so the fade ends right as the song ends: then a "4 bars" fade really is the last 4 bars
+    const early = leftMs - 350 - plan.fadeOutMs;
+    if (early > 60) {
+      await wait(early);
+      if (my !== run) return;
+      leftMs = endsAt - Date.now();
+    }
+    const fadeOutMs = Math.max(plan.kind === 'quick' ? 800 : 1500, Math.min(plan.fadeOutMs, leftMs - 300));
     // a song you queued is already first in Spotify's queue: skip into it (no duplicate copy)
     return next.queued ? skipInto(next, { pb, fadeOutMs, plan }) : mixTo(next, { pb, fadeOutMs, plan });
   }
-  emit({ plan, status: `Next: "${next.title}" in ${Math.max(0, Math.round((leftMs - plan.fadeOutMs) / 1000))}s · ${plan.icon} ${plan.label}` });
+  emit({ plan, status: `Next: "${next.title}" in ${Math.max(0, Math.round((leftMs - plan.fadeOutMs) / 1000))}s · ${plan.icon} ${plan.label}${plan.bars ? ` · ${plan.bars} bar${plan.bars === 1 ? '' : 's'}` : ''}` });
 }
 
 const wait = (ms) => new Promise((r) => after(ms, r));
